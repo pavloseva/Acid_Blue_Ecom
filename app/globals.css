@@ -1,0 +1,197 @@
+@import 'tailwindcss';
+@import 'tw-animate-css';
+
+@custom-variant dark (&:is(.dark *));
+
+/* Acid Blue — Dark acid-pop theme (cyan + magenta/orange gradient) */
+:root {
+  --background: #090b10; /* near-black blue */
+  --foreground: #eaf6f8; /* cool near-white */
+  --card: #12161f;
+  --card-foreground: #eaf6f8;
+  --popover: #12161f;
+  --popover-foreground: #eaf6f8;
+  --primary: #2fd4e6; /* acid cyan */
+  --primary-foreground: #04161a;
+  --secondary: #1a212c;
+  --secondary-foreground: #eaf6f8;
+  --muted: #12161f;
+  --muted-foreground: #8b98a8;
+  --accent: #ff3e9a; /* magenta */
+  --accent-foreground: #ffffff;
+  --destructive: #ff5a5a;
+  --destructive-foreground: #ffffff;
+  --border: #212a36;
+  --input: #161c26;
+  --ring: #2fd4e6;
+  --chart-1: #2fd4e6;
+  --chart-2: #ff3e9a;
+  --chart-3: #ff9a3d;
+  --chart-4: #7c5cff;
+  --chart-5: #8b98a8;
+  --radius: 1rem;
+  --sidebar: #12161f;
+  --sidebar-foreground: #eaf6f8;
+  --sidebar-primary: #2fd4e6;
+  --sidebar-primary-foreground: #04161a;
+  --sidebar-accent: #1a212c;
+  --sidebar-accent-foreground: #eaf6f8;
+  --sidebar-border: #212a36;
+  --sidebar-ring: #2fd4e6;
+  /* Signature acid gradient (mirrors the IG story ring) */
+  --acid-gradient: linear-gradient(120deg, #2fd4e6 0%, #ff3e9a 55%, #ff9a3d 100%);
+}
+
+.dark {
+  --background: #090b10;
+  --foreground: #eaf6f8;
+  --card: #12161f;
+  --card-foreground: #eaf6f8;
+  --popover: #12161f;
+  --popover-foreground: #eaf6f8;
+  --primary: #2fd4e6;
+  --primary-foreground: #04161a;
+  --secondary: #1a212c;
+  --secondary-foreground: #eaf6f8;
+  --muted: #12161f;
+  --muted-foreground: #8b98a8;
+  --accent: #ff3e9a;
+  --accent-foreground: #ffffff;
+  --destructive: #ff5a5a;
+  --destructive-foreground: #ffffff;
+  --border: #212a36;
+  --input: #161c26;
+  --ring: #2fd4e6;
+  --chart-1: #2fd4e6;
+  --chart-2: #ff3e9a;
+  --chart-3: #ff9a3d;
+  --chart-4: #7c5cff;
+  --chart-5: #8b98a8;
+  --sidebar: #12161f;
+  --sidebar-foreground: #eaf6f8;
+  --sidebar-primary: #2fd4e6;
+  --sidebar-primary-foreground: #04161a;
+  --sidebar-accent: #1a212c;
+  --sidebar-accent-foreground: #eaf6f8;
+  --sidebar-border: #212a36;
+  --sidebar-ring: #2fd4e6;
+}
+
+@theme inline {
+  --font-sans: 'DM Sans', 'DM Sans Fallback', sans-serif;
+  --font-serif: 'Space Grotesk', 'Space Grotesk Fallback', sans-serif;
+  --font-mono: 'Geist Mono', 'Geist Mono Fallback', monospace;
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 8px);
+  --radius-2xl: calc(var(--radius) + 16px);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  html {
+    scroll-behavior: smooth;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+}
+
+/* Acid gradient helpers */
+.acid-gradient-bg {
+  background-image: var(--acid-gradient);
+}
+.acid-gradient-text {
+  background-image: var(--acid-gradient);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+/* Gradient ring like the IG story circle */
+.acid-ring {
+  background-image: var(--acid-gradient);
+  padding: 3px;
+  border-radius: 9999px;
+}
+
+/* Soft dark shadow / cyan glow */
+.boty-shadow {
+  box-shadow: rgba(0, 0, 0, 0.5) 0px 8px 30px -12px, rgba(47, 212, 230, 0.06) 0px 0px 0px 1px;
+}
+.acid-glow {
+  box-shadow: 0 0 40px -8px rgba(47, 212, 230, 0.45);
+}
+
+/* Smooth transitions */
+.boty-transition {
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Blur in animation */
+@keyframes blur-in {
+  0% {
+    opacity: 0;
+    filter: blur(12px);
+    transform: translateY(10px);
+  }
+  100% {
+    opacity: 1;
+    filter: blur(0);
+    transform: translateY(0);
+  }
+}
+
+.animate-blur-in {
+  animation: blur-in 0.8s ease-out;
+}
+
+/* Scale fade in animation */
+@keyframes scale-fade-in {
+  0% {
+    opacity: 0;
+    transform: scale(0.9);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.animate-scale-fade-in {
+  animation: scale-fade-in 0.6s ease-out;
+}
