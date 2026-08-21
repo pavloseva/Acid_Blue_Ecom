@@ -5,23 +5,23 @@ import { Instagram, Facebook, Twitter } from "lucide-react"
 
 const footerLinks = {
   shop: [
-    { name: "All Products", href: "/shop" },
-    { name: "Serums", href: "/shop?category=serums" },
-    { name: "Moisturizers", href: "/shop?category=moisturizers" },
-    { name: "Cleansers", href: "/shop?category=cleansers" },
-    { name: "Gift Sets", href: "/shop" }
+    { name: "Almohadones", href: "/shop" },
+    { name: "Posters", href: "/shop" },
+    { name: "Tazas", href: "/shop" },
+    { name: "Novedades", href: "/shop" },
+    { name: "Regalos", href: "/shop" }
   ],
   about: [
-    { name: "Our Story", href: "/" },
-    { name: "Ingredients", href: "/" },
-    { name: "Sustainability", href: "/" },
-    { name: "Press", href: "/" }
+    { name: "Nuestra Historia", href: "/" },
+    { name: "Envios", href: "/" },
+    { name: "Diseños", href: "/" },
+    { name: "Contacto", href: "/" }
   ],
   support: [
-    { name: "Contact Us", href: "/" },
-    { name: "FAQ", href: "/" },
-    { name: "Shipping", href: "/" },
-    { name: "Returns", href: "/" }
+    { name: "Consultas", href: "/" },
+    { name: "Preguntas", href: "/" },
+    { name: "Envío", href: "/" },
+    { name: "Devoluciones", href: "/" }
   ]
 }
 
@@ -41,7 +41,7 @@ export function Footer() {
           <div className="col-span-2 md:col-span-1">
             <h2 className="font-serif text-3xl text-foreground mb-4">Acid Blue</h2>
             <p className="text-sm text-muted-foreground leading-relaxed mb-6">
-              Natural skincare for those who believe beauty should feel as good as it looks.
+              Arte urbano y expresión alternativa desde 2026. Cada pieza impresa con pasión en Córdoba Capital.
             </p>
             <div className="flex gap-4">
               <a
@@ -130,7 +130,7 @@ export function Footer() {
         <div className="pt-10 border-t border-border/50">
           <div className="flex flex-col md:flex-row items-center justify-between gap-4">
             <p className="text-sm text-muted-foreground">
-              © {new Date().getFullYear()} Acid Blue. All rights reserved.
+              © {new Date().getFullYear()} Acid Blue. Derechos reservados.
             </p>
             <div className="flex gap-6">
               <Link href="/" className="text-sm text-muted-foreground hover:text-foreground boty-transition">
