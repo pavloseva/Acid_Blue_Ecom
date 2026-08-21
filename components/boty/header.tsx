@@ -9,7 +9,7 @@ import { useCart } from "./cart-context"
 
 export function Header() {
   const [isMenuOpen, setIsMenuOpen] = useState(false)
-  const { setIsOpen, itemCount } = useCart()
+const { setIsOpen, itemCount } = useCart()
 
   return (
     <header className="fixed top-0 left-0 right-0 z-50 px-4 pt-4">
@@ -92,33 +92,13 @@ export function Header() {
               aria-label="Carrito"
             >
               <ShoppingBag className="w-5 h-5" />
-              {itemCount > 0 && (
+              {/* Only show cart count on client */}
+              {typeof window !== 'undefined' && (
                 <span className="absolute -top-0 -right-0 w-4 h-4 bg-primary text-primary-foreground text-[10px] flex items-center justify-center rounded-full">
                   {itemCount}
                 </span>
               )}
             </button>
-          </div>
-        </div>
-
-        <CartDrawer />
-
-        {/* Mobile Navigation */}
-        <div
-          className={`lg:hidden overflow-hidden boty-transition ${
-            isMenuOpen ? "max-h-64 pb-6" : "max-h-0"
-          }`}
-        >
-          <div className="flex flex-col gap-4 pt-4 border-t border-border/50">
-            <Link href="/shop" className="text-sm tracking-wide text-foreground/70 hover:text-primary boty-transition">
-              Tienda
-            </Link>
-            <Link href="/#nosotros" className="text-sm tracking-wide text-foreground/70 hover:text-primary boty-transition">
-              Nosotros
-            </Link>
-            <Link href="/#envios" className="text-sm tracking-wide text-foreground/70 hover:text-primary boty-transition">
-              Envíos
-            </Link>
           </div>
         </div>
       </nav>
