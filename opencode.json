@@ -1,0 +1,96 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "model": "openrouter/deepseek/deepseek-r1:free",
+  "small_model": "google/gemini-2.0-flash-lite",
+  "provider": {
+    "google": {
+      "options": {
+        "apiKey": "{env:GEMINI_API_KEY}"
+      }
+    },
+    "xai": {
+      "options": {
+        "apiKey": "{env:GROK_API_KEY}"
+      }
+    },
+    "deepseek": {
+      "options": {
+        "apiKey": "{env:DEEPSEEK_API_KEY}"
+      }
+    },
+    "moonshot": {
+      "options": {
+        "apiKey": "{env:MOONSHOT_API_KEY}"
+      }
+    },
+    "openai": {
+      "options": {
+        "apiKey": "{env:OPENAI_API_KEY}"
+      }
+    },
+    "anthropic": {
+      "options": {
+        "apiKey": "{env:ANTHROPIC_API_KEY}"
+      }
+    },
+    "groq": {
+      "options": {
+        "apiKey": "{env:GROQ_API_KEY}"
+      }
+    },
+    "openrouter": {
+      "options": {
+        "apiKey": "{env:OPENROUTER_API_KEY}"
+      }
+    },
+    "nvidia": {
+      "options": {
+        "apiKey": "{env:NVIDIA_API_KEY}",
+        "baseURL": "https://integrate.api.nvidia.com/v1"
+      }
+    }
+  },
+  "agent": {
+    "build": {
+      "mode": "primary",
+      "model": "deepseek/deepseek-chat",
+      "description": "Ecommerce build - cart/checkout implementation",
+      "temperature": 0.2
+    },
+    "build-nvidia": {
+      "mode": "primary",
+      "model": "nvidia/nemotron-3-super-120b-a12b",
+      "description": "Nvidia Nemotron - most capable free model for coding",
+      "temperature": 0.1
+    },
+    "plan": {
+      "mode": "primary",
+      "model": "xai/grok-3-mini",
+      "permission": {
+        "edit": "deny",
+        "bash": "deny"
+      },
+      "description": "Read-only planner for e-commerce tasks",
+      "temperature": 0.1
+    },
+    "explore": {
+      "mode": "subagent",
+      "model": "google/gemini-2.0-flash",
+      "description": "Search codebase and find patterns (supports images)",
+      "temperature": 0.3
+    },
+    "design": {
+      "mode": "subagent",
+      "model": "moonshot/kimi-k2-instruct",
+      "description": "UI/Tailwind tweaks for product pages",
+      "prompt": "You are a UI specialist for Next.js + Tailwind. Only touch app/components/styles/** and public/images/**",
+      "temperature": 0.3
+    },
+    "cheap": {
+      "mode": "subagent",
+      "model": "groq/llama-3.3-70b-versatile",
+      "description": "Fast free tasks - lint, quick fixes",
+      "temperature": 0.1
+    }
+  }
+}

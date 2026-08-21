@@ -1,6 +1,8 @@
 "use client"
 
-import { createContext, useContext, useState, type ReactNode } from "react"
+import { createContext, useContext, useState, useEffect, type ReactNode } from "react"
+
+const STORAGE_KEY = "boty-cart"
 
 export interface CartItem {
   id: string
@@ -23,11 +25,32 @@ interface CartContextType {
   subtotal: number
 }
 
+const loadFromStorage = (): CartItem[] => {
+  try {
+    const stored = localStorage.getItem(STORAGE_KEY)
+    return stored ? JSON.parse(stored) : []
+  } catch {
+    return []
+  }
+}
+
+const saveToStorage = (items: CartItem[]) => {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(items))
+  } catch {
+    // Ignore storage errors
+  }
+}
+
 const CartContext = createContext<CartContextType | undefined>(undefined)
 
 export function CartProvider({ children }: { children: ReactNode }) {
-  const [items, setItems] = useState<CartItem[]>([])
+  const [items, setItems] = useState<CartItem[]>(() => loadFromStorage())
   const [isOpen, setIsOpen] = useState(false)
+
+  useEffect(() => {
+    saveToStorage(items)
+  }, [items])
 
   const addItem = (newItem: Omit<CartItem, "quantity">) => {
     setItems(currentItems => {

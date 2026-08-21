@@ -1,6 +1,6 @@
 "use client"
 
-import { Minus, Plus, Trash2, ShoppingBag } from "lucide-react"
+import { Minus, Plus, Trash2, ShoppingBag, CheckCircle } from "lucide-react"
 import Image from "next/image"
 import {
   Drawer,
@@ -12,12 +12,26 @@ import {
   DrawerTitle,
 } from "@/components/ui/drawer"
 import { useCart } from "./cart-context"
+import { useState } from "react"
 
 export function CartDrawer() {
-  const { items, removeItem, updateQuantity, isOpen, setIsOpen, itemCount, subtotal } = useCart()
+  const { items, removeItem, updateQuantity, isOpen, setIsOpen, itemCount, subtotal, clearCart } = useCart()
 
   const shipping = 0
   const total = subtotal + shipping
+
+  const [checkoutOpen, setCheckoutOpen] = useState(false)
+  const [orderSuccess, setOrderSuccess] = useState(false)
+
+  const handleCheckout = () => {
+    setCheckoutOpen(true)
+  }
+
+  const handleOrderComplete = () => {
+    setOrderSuccess(true)
+    clearCart()
+    setTimeout(() => setCheckoutOpen(false), 3000)
+  }
 
   return (
     <Drawer open={isOpen} onOpenChange={setIsOpen} direction="right">
@@ -125,20 +139,96 @@ export function CartDrawer() {
             {/* Checkout Button */}
             <button
               type="button"
+              onClick={() => handleCheckout()}
               className="w-full bg-primary text-primary-foreground py-4 rounded-full font-medium hover:bg-primary/90 boty-transition"
             >
               Checkout
             </button>
 
+            {checkoutOpen && (
+              <div className="p-6 border-t border-border/50">
+                <h3 className="font-serif text-xl text-foreground mb-6">Complete your order</h3>
+                <form
+                  className="space-y-4"
+                  onSubmit={(e) => {
+                    e.preventDefault()
+                    handleOrderComplete()
+                  }}
+                >
+                  <div>
+                    <label className="text-sm font-medium text-foreground">
+                      Name
+                      <span className="text-muted-foreground">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      className="mt-1 block w-full rounded-lg border border-border px-3 py-2 text-foreground transition-colors focus:border-primary"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-foreground">
+                      Email
+                      <span className="text-muted-foreground">*</span>
+                    </label>
+                    <input
+                      type="email"
+                      required
+                      className="mt-1 block w-full rounded-lg border border-border px-3 py-2 text-foreground transition-colors focus:border-primary"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-foreground">
+                      Address
+                      <span className="text-muted-foreground">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      className="mt-1 block w-full rounded-lg border border-border px-3 py-2 text-foreground transition-colors focus:border-primary"
+                    />
+                  </div>
+
+                  <div>
+                    <button
+                      type="submit"
+                      className="w-full bg-primary text-primary-foreground py-3 rounded-full font-medium hover:bg-primary/90 boty-transition"
+                    >
+                      Place order
+                    </button>
+                  </div>
+                </form>
+              </div>
+            )}
+
             <DrawerClose asChild>
               <button
                 type="button"
                 className="w-full border border-border text-foreground py-4 rounded-full font-medium hover:bg-muted boty-transition"
+                onClick={() => setCheckoutOpen(false)}
               >
                 Continue Shopping
               </button>
             </DrawerClose>
           </DrawerFooter>
+        )}
+
+        {/* Order Success Modal - shown after checkout */}
+        {orderSuccess && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80">
+            <div className="bg-card rounded-3xl p-8 text-center border border-border boty-shadow max-w-sm">
+              <CheckCircle className="w-16 h-16 mx-auto mb-6 text-primary" />
+              <h3 className="font-serif text-2xl text-foreground mb-2">¡Gracias por tu pedido!</h3>
+              <p className="text-muted-foreground mb-6">Tu pedido ha sido recibido. Enviaremos un correo a pronto.</p>
+              <button
+                type="button"
+                onClick={() => setOrderSuccess(false)}
+                className="bg-primary text-primary-foreground px-6 py-3 rounded-full font-medium text-sm boty-transition"
+              >
+                Continuar comprando
+              </button>
+            </div>
+          </div>
         )}
       </DrawerContent>
     </Drawer>

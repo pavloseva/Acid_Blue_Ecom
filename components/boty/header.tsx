@@ -55,7 +55,7 @@ export function Header() {
             <span className="acid-ring inline-flex">
               <span className="rounded-full overflow-hidden bg-background block">
                 <Image
-                  src="/images/acid-blue-logo.png"
+                  src="/images/acid/Logo-Acid-Blue.png"
                   alt="Acid Blue"
                   width={40}
                   height={40}
