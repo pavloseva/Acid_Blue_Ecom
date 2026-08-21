@@ -88,7 +88,7 @@ const TestimonialCard = ({ testimonial }: { testimonial: typeof testimonials[0] 
     
 
     {/* Quote */}
-    <p className="text-foreground/80 leading-relaxed mb-4 text-pretty font-medium text-xl font-serif tracking-wide">
+    <p className="text-primary leading-relaxed mb-4 text-pretty font-medium text-xl font-serif tracking-wide">
       &ldquo;{testimonial.text}&rdquo;
     </p>
 

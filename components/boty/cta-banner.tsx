@@ -37,14 +37,12 @@ export function CTABanner() {
           className={`rounded-3xl p-12 md:p-16 flex flex-col justify-center relative overflow-hidden min-h-[400px] transition-all duration-700 ease-out ${
             isVisible ? 'opacity-100 scale-100' : 'opacity-0 scale-95'
           }`}
+          style={{
+            background: 'linear-gradient(135deg, oklch(0.205 0 0) 0%, oklch(0.97 0 0) 100%)'
+          }}
         >
-          {/* Background Image */}
-          <Image
-            src="/images/bf965cf4-e728-4e72-ab1b-16b1cd8f1822.png"
-            alt="Natural ingredients"
-            fill
-            className="object-cover"
-          />
+          {/* Background - gradient replacing image */}
+          {/* Image removed - using gradient background for Acid Blue style */}
           
           <div className="relative z-10 text-left max-w-2xl">
             <h3 className="text-4xl md:text-5xl text-white mb-4 lg:text-5xl">
