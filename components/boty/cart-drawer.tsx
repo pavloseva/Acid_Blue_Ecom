@@ -157,7 +157,7 @@ export function CartDrawer() {
                 >
                   <div>
                     <label className="text-sm font-medium text-foreground">
-                      Name
+                      Nombre
                       <span className="text-muted-foreground">*</span>
                     </label>
                     <input
@@ -179,7 +179,7 @@ export function CartDrawer() {
                   </div>
                   <div>
                     <label className="text-sm font-medium text-foreground">
-                      Address
+                      Dirección
                       <span className="text-muted-foreground">*</span>
                     </label>
                     <input
