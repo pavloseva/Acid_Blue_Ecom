@@ -45,12 +45,22 @@ const saveToStorage = (items: CartItem[]) => {
 const CartContext = createContext<CartContextType | undefined>(undefined)
 
 export function CartProvider({ children }: { children: ReactNode }) {
-  const [items, setItems] = useState<CartItem[]>(() => loadFromStorage())
+  const [items, setItems] = useState<CartItem[]>([])
   const [isOpen, setIsOpen] = useState(false)
+  const [isLoaded, setIsLoaded] = useState(false)
 
+  // Load cart from localStorage after mount (avoids hydration mismatch)
   useEffect(() => {
-    saveToStorage(items)
-  }, [items])
+    setItems(loadFromStorage())
+    setIsLoaded(true)
+  }, [])
+
+  // Save to storage only after initial load completes
+  useEffect(() => {
+    if (isLoaded) {
+      saveToStorage(items)
+    }
+  }, [items, isLoaded])
 
   const addItem = (newItem: Omit<CartItem, "quantity">) => {
     setItems(currentItems => {

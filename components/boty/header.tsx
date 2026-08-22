@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import Link from "next/link"
 import Image from "next/image"
 import { Menu, X, ShoppingBag, Search, User } from "lucide-react"
@@ -9,7 +9,13 @@ import { useCart } from "./cart-context"
 
 export function Header() {
   const [isMenuOpen, setIsMenuOpen] = useState(false)
-const { setIsOpen, itemCount } = useCart()
+  const [isMounted, setIsMounted] = useState(false)
+  const { setIsOpen, itemCount } = useCart()
+
+  // Only show cart count after mount (avoids hydration mismatch)
+  useEffect(() => {
+    setIsMounted(true)
+  }, [])
 
   return (
     <header className="fixed top-0 left-0 right-0 z-50 px-4 pt-4">
@@ -93,7 +99,7 @@ const { setIsOpen, itemCount } = useCart()
             >
               <ShoppingBag className="w-5 h-5" />
               {/* Only show cart count on client */}
-              {typeof window !== 'undefined' && (
+              {isMounted && itemCount > 0 && (
                 <span className="absolute -top-0 -right-0 w-4 h-4 bg-primary text-primary-foreground text-[10px] flex items-center justify-center rounded-full">
                   {itemCount}
                 </span>
