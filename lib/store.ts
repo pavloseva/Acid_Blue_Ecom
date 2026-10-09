@@ -148,7 +148,40 @@ export function getOrders(): Order[] {
       localStorage.setItem(ORDERS_KEY, JSON.stringify(SAMPLE_ORDERS))
       return SAMPLE_ORDERS
     }
-    return JSON.parse(raw) as Order[]
+    const parsed = JSON.parse(raw)
+    if (!Array.isArray(parsed)) return SAMPLE_ORDERS
+    return parsed.map((o: any) => {
+      const total = Number(o?.total) || 0
+      const shipping = Number(o?.shipping) || 0
+      const subtotal = Number(o?.subtotal) || (total - shipping > 0 ? total - shipping : total)
+      return {
+        ...o,
+        id: String(o?.id || `ORD-${Date.now()}`),
+        customer: {
+          name: o?.customer?.name || "Cliente",
+          email: o?.customer?.email || "",
+          phone: o?.customer?.phone || "",
+          address: o?.customer?.address || "",
+          city: o?.customer?.city || "",
+          notes: o?.customer?.notes || undefined,
+        },
+        items: Array.isArray(o?.items)
+          ? o.items.map((i: any) => ({
+              id: i?.id || "item",
+              name: i?.name || "Producto",
+              description: i?.description || "",
+              price: Number(i?.price) || 0,
+              quantity: Number(i?.quantity) || 1,
+              image: i?.image || "/placeholder.svg",
+            }))
+          : [],
+        subtotal,
+        shipping,
+        total,
+        status: (o?.status as OrderStatus) || "pendiente",
+        createdAt: o?.createdAt || new Date().toISOString(),
+      }
+    })
   } catch (err) {
     console.error("Error reading orders from localStorage:", err)
     return SAMPLE_ORDERS
@@ -298,10 +331,24 @@ export function getAllProducts(): Product[] {
       return p
     })
 
-  // Also filter any custom products if deleted
-  const effectiveCustom = custom.filter((p) => !deletedIds.has(p.id))
+  const seenIds = new Set<string>()
+  const result: Product[] = []
 
-  return [...effectiveCustom, ...effectiveBaseProducts]
+  for (const p of custom) {
+    if (p && p.id && !deletedIds.has(p.id) && !seenIds.has(p.id)) {
+      seenIds.add(p.id)
+      result.push(p)
+    }
+  }
+
+  for (const p of effectiveBaseProducts) {
+    if (p && p.id && !seenIds.has(p.id)) {
+      seenIds.add(p.id)
+      result.push(p)
+    }
+  }
+
+  return result
 }
 
 export function getProductById(id: string): Product | undefined {
@@ -463,16 +510,20 @@ Equipo Acid Blue`,
 }
 
 export function sendOrderConfirmationEmail(order: Order): EmailRecord {
-  const itemsText = order.items
-    .map((i) => `• ${i.quantity}x ${i.name} (${i.description || ""}) - $${i.price.toLocaleString("es-AR")}`)
+  const itemsText = (order.items || [])
+    .map((i) => `• ${i.quantity || 1}x ${i.name || "Producto"} (${i.description || ""}) - $${Number(i.price || 0).toLocaleString("es-AR")}`)
     .join("\n")
+
+  const subtotal = Number(order.subtotal) || 0
+  const shipping = Number(order.shipping) || 0
+  const total = Number(order.total) || 0
 
   return recordEmail({
     type: "order",
     orderId: order.id,
-    to: order.customer.email,
+    to: order.customer?.email || "",
     subject: `Confirmación de pedido #${order.id} · Acid Blue`,
-    body: `¡Hola ${order.customer.name}!
+    body: `¡Hola ${order.customer?.name || "Cliente"}!
 
 ¡Gracias por tu compra en Acid Blue! Tu pedido #${order.id} ha sido registrado con éxito y ya lo estamos preparando en nuestro taller.
 
@@ -480,9 +531,9 @@ DETALLE DEL PEDIDO:
 ------------------------------------------
 ${itemsText}
 ------------------------------------------
-Subtotal: $${order.subtotal.toLocaleString("es-AR")}
-Envío: ${order.shipping === 0 ? "Gratis" : "$" + order.shipping.toLocaleString("es-AR")}
-Total: $${order.total.toLocaleString("es-AR")}
+Subtotal: $${subtotal.toLocaleString("es-AR")}
+Envío: ${shipping === 0 ? "Gratis" : "$" + shipping.toLocaleString("es-AR")}
+Total: $${total.toLocaleString("es-AR")}
 
 DATOS DE ENVÍO:
 Destinatario: ${order.customer.name}

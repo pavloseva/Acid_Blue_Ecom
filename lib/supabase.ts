@@ -16,21 +16,22 @@ function getHeaders(extraHeaders: Record<string, string> = {}) {
 // PRODUCT MAPPERS
 // -------------------------------------------------------------
 function mapDbToProduct(row: any): Product {
+  const image = row.image || "/placeholder.svg"
   return {
-    id: row.id,
-    name: row.name,
-    description: row.description,
+    id: String(row.id || ""),
+    name: row.name || "Producto",
+    description: row.description || "",
     tagline: row.tagline || "",
     longDescription: row.long_description || "",
-    price: Number(row.price),
+    price: Number(row.price) || 0,
     originalPrice: row.original_price ? Number(row.original_price) : null,
-    image: row.image,
-    images: Array.isArray(row.images) ? row.images : [row.image],
+    image,
+    images: Array.isArray(row.images) && row.images.length > 0 ? row.images : [image],
     video: row.video || undefined,
     imageFit: (row.image_fit as "contain" | "cover") || "contain",
     badge: row.badge || null,
-    category: row.category,
-    options: Array.isArray(row.options) ? row.options : ["Único"],
+    category: row.category || "almohadon",
+    options: Array.isArray(row.options) && row.options.length > 0 ? row.options : ["Único"],
     optionLabel: row.option_label || "Medida",
     details: row.details || "",
     care: row.care || "",
@@ -67,19 +68,34 @@ function mapProductToDb(p: Partial<Product> & { id: string }) {
 // ORDER MAPPERS
 // -------------------------------------------------------------
 function mapDbToOrder(row: any): Order {
+  const total = Number(row.total) || 0
+  const shipping = Number(row.shipping) || 0
+  const subtotal = Number(row.subtotal) || (total - shipping > 0 ? total - shipping : total)
   return {
-    id: row.id,
-    createdAt: row.created_at,
+    id: String(row.id || `ORD-${Date.now()}`),
+    createdAt: row.created_at || new Date().toISOString(),
     customer: {
-      name: row.customer_name,
-      email: row.customer_email,
+      name: row.customer_name || "Cliente",
+      email: row.customer_email || "",
       phone: row.customer_phone || "",
-      address: row.customer_address,
+      address: row.customer_address || "",
+      city: row.customer_city || "",
       notes: row.customer_notes || undefined,
     },
-    items: Array.isArray(row.items) ? row.items : [],
-    total: Number(row.total),
-    status: row.status as OrderStatus,
+    items: Array.isArray(row.items)
+      ? row.items.map((i: any) => ({
+          id: i?.id || "item",
+          name: i?.name || "Producto",
+          description: i?.description || "",
+          price: Number(i?.price) || 0,
+          quantity: Number(i?.quantity) || 1,
+          image: i?.image || "/placeholder.svg",
+        }))
+      : [],
+    subtotal,
+    shipping,
+    total,
+    status: (row.status as OrderStatus) || "pendiente",
     paymentMethod: row.payment_method || "transferencia",
   }
 }
@@ -87,15 +103,17 @@ function mapDbToOrder(row: any): Order {
 function mapOrderToDb(o: Order) {
   return {
     id: o.id,
-    customer_name: o.customer.name,
-    customer_email: o.customer.email,
-    customer_phone: o.customer.phone || null,
-    customer_address: o.customer.address,
-    customer_notes: o.customer.notes || null,
-    items: o.items,
-    total: o.total,
-    status: o.status,
-    payment_method: o.paymentMethod || "transferencia",
+    customer_name: o.customer?.name || "",
+    customer_email: o.customer?.email || "",
+    customer_phone: o.customer?.phone || null,
+    customer_address: o.customer?.address || "",
+    customer_notes: o.customer?.notes || null,
+    items: o.items || [],
+    subtotal: o.subtotal || 0,
+    shipping: o.shipping || 0,
+    total: o.total || 0,
+    status: o.status || "pendiente",
+    payment_method: (o as any).paymentMethod || "transferencia",
   }
 }
 

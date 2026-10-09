@@ -231,15 +231,18 @@ export default function AdminDashboardPage() {
   }
 
   const handleCopyShippingDetails = (order: Order) => {
-    const text = `PEDIDO #${order.id}
-Cliente: ${order.customer.name}
-Email: ${order.customer.email}
-Dirección: ${order.customer.address} ${order.customer.city ? `(${order.customer.city})` : ""}
-Teléfono: ${order.customer.phone || "No especificado"}
-Notas: ${order.customer.notes || "Sin notas"}
+    if (!order) return
+    const customer = order.customer || { name: "", email: "", address: "" }
+    const items = order.items || []
+    const text = `PEDIDO #${order.id || ""}
+Cliente: ${customer.name || ""}
+Email: ${customer.email || ""}
+Dirección: ${customer.address || ""} ${customer.city ? `(${customer.city})` : ""}
+Teléfono: ${customer.phone || "No especificado"}
+Notas: ${customer.notes || "Sin notas"}
 
 Artículos:
-${order.items.map((i) => `- ${i.quantity}x ${i.name} (${i.description || ""})`).join("\n")}
+${items.map((i) => `- ${i?.quantity || 1}x ${i?.name || "Producto"} (${i?.description || ""})`).join("\n")}
 Total: ${formatARS(order.total)}`
 
     navigator.clipboard.writeText(text)
@@ -454,34 +457,39 @@ Total: ${formatARS(order.total)}`
 
   // Filtered orders
   const filteredOrders = orders.filter((order) => {
+    if (!order) return false
     const matchesStatus = orderStatusFilter === "all" || order.status === orderStatusFilter
-    const term = orderSearch.toLowerCase()
-    const matchesSearch =
-      !term ||
-      order.id.toLowerCase().includes(term) ||
-      order.customer.name.toLowerCase().includes(term) ||
-      order.customer.email.toLowerCase().includes(term) ||
-      (order.customer.address && order.customer.address.toLowerCase().includes(term))
-    return matchesStatus && matchesSearch
+    const term = (orderSearch || "").toLowerCase()
+    if (!matchesStatus) return false
+    if (!term) return true
+
+    const id = String(order.id || "").toLowerCase()
+    const name = String(order.customer?.name || "").toLowerCase()
+    const email = String(order.customer?.email || "").toLowerCase()
+    const address = String(order.customer?.address || "").toLowerCase()
+
+    return id.includes(term) || name.includes(term) || email.includes(term) || address.includes(term)
   })
 
   // Filtered products
   const filteredProducts = productsList.filter((product) => {
-    const term = productSearch.toLowerCase()
-    return (
-      !term ||
-      product.name.toLowerCase().includes(term) ||
-      product.category.toLowerCase().includes(term) ||
-      (product.tagline && product.tagline.toLowerCase().includes(term))
-    )
+    if (!product) return false
+    const term = (productSearch || "").toLowerCase()
+    if (!term) return true
+
+    const name = String(product.name || "").toLowerCase()
+    const category = String(product.category || "").toLowerCase()
+    const tagline = String(product.tagline || "").toLowerCase()
+
+    return name.includes(term) || category.includes(term) || tagline.includes(term)
   })
 
   // KPIs
   const totalRevenue = orders
-    .filter((o) => o.status !== "cancelado")
-    .reduce((sum, o) => sum + o.total, 0)
-  const pendingOrdersCount = orders.filter((o) => o.status === "pendiente").length
-  const shippedOrdersCount = orders.filter((o) => o.status === "enviado" || o.status === "entregado").length
+    .filter((o) => o && o.status !== "cancelado")
+    .reduce((sum, o) => sum + (Number(o.total) || 0), 0)
+  const pendingOrdersCount = orders.filter((o) => o && o.status === "pendiente").length
+  const shippedOrdersCount = orders.filter((o) => o && (o.status === "enviado" || o.status === "entregado")).length
 
   if (!isMounted) return null
 
@@ -850,14 +858,22 @@ Total: ${formatARS(order.total)}`
             ) : (
               <div className="space-y-4">
                 {filteredOrders.map((order) => {
-                  const statusInfo = STATUS_CONFIG[order.status]
-                  const formattedDate = new Date(order.createdAt).toLocaleString("es-AR", {
-                    day: "2-digit",
-                    month: "2-digit",
-                    year: "numeric",
-                    hour: "2-digit",
-                    minute: "2-digit",
-                  })
+                  const statusInfo = STATUS_CONFIG[order.status] || STATUS_CONFIG.pendiente
+                  const formattedDate = order.createdAt
+                    ? (() => {
+                        try {
+                          return new Date(order.createdAt).toLocaleString("es-AR", {
+                            day: "2-digit",
+                            month: "2-digit",
+                            year: "numeric",
+                            hour: "2-digit",
+                            minute: "2-digit",
+                          })
+                        } catch {
+                          return String(order.createdAt)
+                        }
+                      })()
+                    : "—"
 
                   return (
                     <div
@@ -880,7 +896,7 @@ Total: ${formatARS(order.total)}`
                           <span className="text-xs text-muted-foreground mr-1">Estado:</span>
                           <div className="relative inline-block">
                             <select
-                              value={order.status}
+                              value={order.status || "pendiente"}
                               onChange={(e) =>
                                 handleStatusChange(order.id, e.target.value as OrderStatus)
                               }
@@ -929,25 +945,25 @@ Total: ${formatARS(order.total)}`
                             Datos del Cliente
                           </span>
                           <p className="font-semibold text-foreground text-base">
-                            {order.customer.name}
+                            {order.customer?.name || "Cliente"}
                           </p>
                           <a
-                            href={`mailto:${order.customer.email}`}
+                            href={`mailto:${order.customer?.email || ""}`}
                             className="text-xs text-primary hover:underline flex items-center gap-1.5"
                           >
                             <Mail className="w-3.5 h-3.5" />
-                            {order.customer.email}
+                            {order.customer?.email || "Sin email"}
                           </a>
                           <div className="text-xs text-muted-foreground flex items-start gap-1.5 pt-1">
                             <MapPin className="w-3.5 h-3.5 text-muted-foreground/70 flex-shrink-0 mt-0.5" />
                             <span>
-                              {order.customer.address}
-                              {order.customer.city ? ` · ${order.customer.city}` : ""}
+                              {order.customer?.address || "Sin dirección"}
+                              {order.customer?.city ? ` · ${order.customer.city}` : ""}
                             </span>
                           </div>
-                          {order.customer.phone && (
+                          {order.customer?.phone && (
                             <a
-                              href={`https://wa.me/${order.customer.phone.replace(/[^0-9]/g, "")}`}
+                              href={`https://wa.me/${String(order.customer.phone).replace(/[^0-9]/g, "")}`}
                               target="_blank"
                               rel="noopener noreferrer"
                               className="text-xs text-emerald-400 hover:underline flex items-center gap-1.5 pt-1"
@@ -956,7 +972,7 @@ Total: ${formatARS(order.total)}`
                               {order.customer.phone} (WhatsApp)
                             </a>
                           )}
-                          {order.customer.notes && (
+                          {order.customer?.notes && (
                             <p className="text-xs bg-background/60 border border-border/60 rounded-lg p-2 text-muted-foreground mt-2 italic">
                               Nota: {order.customer.notes}
                             </p>
@@ -966,18 +982,18 @@ Total: ${formatARS(order.total)}`
                         {/* Items ordered */}
                         <div className="space-y-2 md:col-span-2">
                           <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider block mb-1">
-                            Productos ({order.items.reduce((s, i) => s + i.quantity, 0)})
+                            Productos ({Array.isArray(order.items) ? order.items.reduce((s, i) => s + (Number(i?.quantity) || 0), 0) : 0})
                           </span>
                           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                            {order.items.map((item, idx) => (
+                            {Array.isArray(order.items) && order.items.map((item, idx) => (
                               <div
                                 key={idx}
                                 className="flex items-center gap-3 bg-background/60 p-2.5 rounded-xl border border-border/60"
                               >
                                 <div className="relative w-12 h-12 rounded-lg overflow-hidden bg-muted flex-shrink-0">
                                   <Image
-                                    src={item.image || "/placeholder.svg"}
-                                    alt={item.name}
+                                    src={item?.image || "/placeholder.svg"}
+                                    alt={item?.name || "Producto"}
                                     fill
                                     unoptimized
                                     className="object-cover"
@@ -985,19 +1001,19 @@ Total: ${formatARS(order.total)}`
                                 </div>
                                 <div className="flex-1 min-w-0">
                                   <p className="text-xs font-semibold text-foreground truncate">
-                                    {item.name}
+                                    {item?.name || "Producto"}
                                   </p>
-                                  {item.description && (
+                                  {item?.description && (
                                     <p className="text-[11px] text-muted-foreground truncate">
                                       {item.description}
                                     </p>
                                   )}
                                   <div className="flex items-center justify-between text-xs mt-1">
                                     <span className="text-muted-foreground font-mono">
-                                      Cant: <strong className="text-foreground">{item.quantity}</strong>
+                                      Cant: <strong className="text-foreground">{item?.quantity || 1}</strong>
                                     </span>
                                     <span className="font-semibold text-primary">
-                                      {formatARS(item.price * item.quantity)}
+                                      {formatARS((Number(item?.price) || 0) * (Number(item?.quantity) || 1))}
                                     </span>
                                   </div>
                                 </div>
@@ -1008,7 +1024,7 @@ Total: ${formatARS(order.total)}`
                           {/* Total row */}
                           <div className="flex items-center justify-between pt-3 border-t border-border/40 text-sm">
                             <span className="text-xs text-muted-foreground">
-                              Envío: {order.shipping === 0 ? "Gratis" : formatARS(order.shipping)}
+                              Envío: {order.shipping === 0 ? "Gratis" : formatARS(order.shipping || 0)}
                             </span>
                             <div className="flex items-center gap-2">
                               <span className="text-muted-foreground text-xs uppercase font-medium">
@@ -1225,7 +1241,15 @@ Total: ${formatARS(order.total)}`
                         {em.type === "newsletter" ? "Newsletter" : "Pedido"}
                       </span>
                       <span className="text-xs text-muted-foreground">
-                        {new Date(em.sentAt).toLocaleString("es-AR")}
+                        {em.sentAt
+                          ? (() => {
+                              try {
+                                return new Date(em.sentAt).toLocaleString("es-AR")
+                              } catch {
+                                return String(em.sentAt)
+                              }
+                            })()
+                          : ""}
                       </span>
                     </div>
                     <h4 className="font-serif text-base font-bold text-foreground mb-1">
@@ -1261,7 +1285,16 @@ Total: ${formatARS(order.total)}`
                   {selectedEmail.subject}
                 </h3>
                 <p className="text-xs text-muted-foreground mt-0.5">
-                  Para: <strong>{selectedEmail.to}</strong> · {new Date(selectedEmail.sentAt).toLocaleString("es-AR")}
+                  Para: <strong>{selectedEmail.to}</strong> ·{" "}
+                  {selectedEmail.sentAt
+                    ? (() => {
+                        try {
+                          return new Date(selectedEmail.sentAt).toLocaleString("es-AR")
+                        } catch {
+                          return String(selectedEmail.sentAt)
+                        }
+                      })()
+                    : ""}
                 </p>
               </div>
               <button

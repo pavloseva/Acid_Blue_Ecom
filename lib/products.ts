@@ -217,8 +217,11 @@ export const categoryLabels: Record<Category, string> = {
   taza: "Tazas",
 }
 
-export function formatARS(value: number): string {
-  return "$" + value.toLocaleString("es-AR")
+export function formatARS(value: number | null | undefined): string {
+  if (value === null || value === undefined || isNaN(Number(value))) {
+    return "$0"
+  }
+  return "$" + Number(value).toLocaleString("es-AR")
 }
 
 export function getProduct(id: string): Product | undefined {
