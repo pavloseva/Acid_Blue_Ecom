@@ -80,7 +80,7 @@ export async function POST(request: Request) {
     if (apiKey) {
       const html = generateAcidEmailHtml({ subject, body })
 
-      const resendRes = await fetch("https://api.resend.com/emails", {
+      let resendRes = await fetch("https://api.resend.com/emails", {
         method: "POST",
         headers: {
           Authorization: `Bearer ${apiKey}`,
@@ -95,7 +95,27 @@ export async function POST(request: Request) {
         }),
       })
 
-      const resendData = await resendRes.json()
+      let resendData = await resendRes.json()
+
+      // If Resend onboarding test mode restricts sending to other emails, route test copy to registered owner!
+      if (!resendRes.ok && resendData?.message?.includes("sv.pablo@gmail.com")) {
+        console.warn(`[RESEND TEST MODE] Redirigiendo correo de prueba a sv.pablo@gmail.com (destinatario original: ${to})`)
+        resendRes = await fetch("https://api.resend.com/emails", {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${apiKey}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            from: fromAddress,
+            to: ["sv.pablo@gmail.com"],
+            subject: `[Prueba para: ${to}] ${subject}`,
+            html: html,
+            text: `(Destinado originalmente a: ${to})\n\n` + body,
+          }),
+        })
+        resendData = await resendRes.json()
+      }
 
       if (!resendRes.ok) {
         console.error("[RESEND ERROR]", resendData)
