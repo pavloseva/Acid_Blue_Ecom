@@ -25,6 +25,7 @@ import { Header } from "@/components/boty/header"
 import { Footer } from "@/components/boty/footer"
 import { useCart } from "@/components/boty/cart-context"
 import { products, getProduct, formatARS, type Product } from "@/lib/products"
+import { getProductById } from "@/lib/store"
 
 const benefits = [
   { icon: Truck, label: "Envío a todo el país" },
@@ -40,50 +41,56 @@ type MediaItem = { type: "image"; url: string } | { type: "video"; url: string }
 export default function ProductPage() {
   const params = useParams()
   const productId = params.id as string
-  const [product, setProduct] = useState<Product>(() => getProduct(productId) || products[0])
-
-  useEffect(() => {
-    const found = getProduct(productId)
-    if (found) {
-      setProduct(found)
-    }
-  }, [productId])
+  const baseProd = getProduct(productId)
+  const [product, setProduct] = useState<Product | null>(baseProd || null)
+  const [isMounted, setIsMounted] = useState(false)
 
   const { addItem, setIsOpen } = useCart()
-  const [selectedOption, setSelectedOption] = useState(product?.options?.[0] || "Único")
+  const [selectedOption, setSelectedOption] = useState(() => baseProd?.options?.[0] || "Único")
   const [quantity, setQuantity] = useState(1)
   const [openAccordion, setOpenAccordion] = useState<AccordionSection | null>("details")
   const [isAdded, setIsAdded] = useState(false)
 
   // Media Gallery State
   const [activeMediaIndex, setActiveMediaIndex] = useState(0)
-  const [isFitContain, setIsFitContain] = useState(product.imageFit !== "cover")
+  const [isFitContain, setIsFitContain] = useState(() => (baseProd ? baseProd.imageFit !== "cover" : true))
   const [isLightboxOpen, setIsLightboxOpen] = useState(false)
 
-  // Build Media Items List (Images + Video)
-  const imagesList = Array.from(
-    new Set([product.image, ...(product.images || [])].filter(Boolean))
-  )
-  const mediaItems: MediaItem[] = [
-    ...imagesList.map((url) => ({ type: "image" as const, url })),
-    ...(product.video ? [{ type: "video" as const, url: product.video }] : []),
-  ]
+  // Sync with client-side store after mount and on updates
+  useEffect(() => {
+    setIsMounted(true)
+    const sync = () => {
+      const found = getProductById(productId) || getProduct(productId)
+      if (found) {
+        setProduct(found)
+      }
+    }
+    sync()
+    window.addEventListener("acid_store_updated", sync)
+    return () => window.removeEventListener("acid_store_updated", sync)
+  }, [productId])
 
-  const currentMedia = mediaItems[activeMediaIndex] || mediaItems[0] || { type: "image", url: product.image }
+  useEffect(() => {
+    if (product) {
+      if (product.options && product.options.length > 0 && !product.options.includes(selectedOption)) {
+        setSelectedOption(product.options[0])
+      }
+      setIsFitContain(product.imageFit !== "cover")
+    }
+  }, [product])
 
   useEffect(() => {
     window.scrollTo(0, 0)
-    setSelectedOption(product.options?.[0] || "Único")
-    setQuantity(1)
     setActiveMediaIndex(0)
-    setIsFitContain(product.imageFit !== "cover")
-  }, [productId, product])
+    setQuantity(1)
+  }, [productId])
 
   const toggleAccordion = (section: AccordionSection) => {
     setOpenAccordion(openAccordion === section ? null : section)
   }
 
   const handleAddToCart = (openCart = false) => {
+    if (!product) return
     for (let i = 0; i < quantity; i++) {
       addItem({
         id: product.id,
@@ -101,6 +108,56 @@ export default function ProductPage() {
     }
   }
 
+  const isYouTube = (url: string) => url.includes("youtube.com") || url.includes("youtu.be")
+  const getYouTubeEmbedUrl = (url: string) => {
+    if (url.includes("embed/")) return url
+    const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/
+    const match = url.match(regExp)
+    return match && match[2].length === 11 ? `https://www.youtube.com/embed/${match[2]}` : url
+  }
+
+  if (!product) {
+    if (!isMounted) {
+      return (
+        <main className="min-h-screen">
+          <Header />
+          <div className="pt-36 pb-24 max-w-7xl mx-auto px-6 lg:px-8 text-center flex flex-col items-center justify-center min-h-[50vh]">
+            <div className="w-12 h-12 border-2 border-primary border-t-transparent rounded-full animate-spin mb-4" />
+            <p className="text-muted-foreground text-sm font-mono tracking-wider">Cargando producto...</p>
+          </div>
+          <Footer />
+        </main>
+      )
+    }
+    return (
+      <main className="min-h-screen">
+        <Header />
+        <div className="pt-36 pb-24 max-w-7xl mx-auto px-6 lg:px-8 text-center flex flex-col items-center justify-center min-h-[50vh]">
+          <h1 className="font-serif text-3xl font-bold text-foreground mb-3">Producto no encontrado</h1>
+          <p className="text-muted-foreground mb-8 text-sm">El producto que buscas no existe o fue eliminado.</p>
+          <Link
+            href="/shop"
+            className="inline-flex items-center gap-2 px-8 py-3.5 rounded-full bg-primary text-primary-foreground font-medium hover:bg-primary/90 boty-transition"
+          >
+            Volver a la tienda
+          </Link>
+        </div>
+        <Footer />
+      </main>
+    )
+  }
+
+  // Build Media Items List (Images + Video)
+  const imagesList = Array.from(
+    new Set([product.image, ...(product.images || [])].filter(Boolean))
+  )
+  const mediaItems: MediaItem[] = [
+    ...imagesList.map((url) => ({ type: "image" as const, url })),
+    ...(product.video ? [{ type: "video" as const, url: product.video }] : []),
+  ]
+
+  const currentMedia = mediaItems[activeMediaIndex] || mediaItems[0] || { type: "image", url: product.image }
+
   const accordionItems: { key: AccordionSection; title: string; content: string }[] = [
     { key: "details", title: "Detalles", content: product.details },
     { key: "care", title: "Cuidados", content: product.care },
@@ -109,14 +166,6 @@ export default function ProductPage() {
   ]
 
   const related = products.filter((p) => p.category === product.category && p.id !== product.id).slice(0, 4)
-
-  const isYouTube = (url: string) => url.includes("youtube.com") || url.includes("youtu.be")
-  const getYouTubeEmbedUrl = (url: string) => {
-    if (url.includes("embed/")) return url
-    const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/
-    const match = url.match(regExp)
-    return match && match[2].length === 11 ? `https://www.youtube.com/embed/${match[2]}` : url
-  }
 
   return (
     <main className="min-h-screen">
@@ -143,6 +192,7 @@ export default function ProductPage() {
                 {/* Badge Overlay */}
                 {product.badge && (
                   <span
+                    suppressHydrationWarning
                     className={`absolute top-4 left-4 z-20 px-3 py-1 rounded-full text-xs font-medium tracking-wide ${
                       product.badge === "Oferta"
                         ? "bg-accent text-accent-foreground"
@@ -294,10 +344,10 @@ export default function ProductPage() {
                 <span className="text-sm tracking-[0.3em] uppercase text-primary mb-2 block">
                   Acid Blue
                 </span>
-                <h1 className="font-serif text-4xl md:text-5xl text-foreground mb-3 font-semibold">
+                <h1 suppressHydrationWarning className="font-serif text-4xl md:text-5xl text-foreground mb-3 font-semibold">
                   {product.name}
                 </h1>
-                <p className="text-lg text-muted-foreground italic mb-4">{product.tagline}</p>
+                <p suppressHydrationWarning className="text-lg text-muted-foreground italic mb-4">{product.tagline}</p>
 
                 {/* Rating */}
                 <div className="flex items-center gap-2 mb-4">
@@ -309,11 +359,11 @@ export default function ProductPage() {
                   <span className="text-sm text-muted-foreground">(128 reseñas)</span>
                 </div>
 
-                <p className="text-foreground/80 leading-relaxed">{product.longDescription}</p>
+                <p suppressHydrationWarning className="text-foreground/80 leading-relaxed">{product.longDescription}</p>
               </div>
 
               {/* Price */}
-              <div className="flex items-center gap-3 mb-8">
+              <div suppressHydrationWarning className="flex items-center gap-3 mb-8">
                 <span className="text-3xl font-medium text-foreground">{formatARS(product.price)}</span>
                 {product.originalPrice && (
                   <span className="text-xl text-muted-foreground line-through">
