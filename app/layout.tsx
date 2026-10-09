@@ -13,9 +13,9 @@ const poppins = Poppins({
   display: 'swap',
 });
 
-const playlistScript = localFont({
-  src: './fonts/Playlist-Script.otf',
-  variable: '--font-playlist',
+const lakesight = localFont({
+  src: './fonts/Lakesight.ttf',
+  variable: '--font-lakesight',
   display: 'swap',
 });
 
@@ -41,7 +41,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="es" className="dark bg-background">
-      <body className={`${poppins.variable} ${playlistScript.variable} font-sans antialiased`}>
+      <body className={`${poppins.variable} ${lakesight.variable} font-sans antialiased`}>
         <CartProvider>
           {children}
         </CartProvider>

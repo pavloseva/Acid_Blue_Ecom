@@ -59,9 +59,9 @@ export function Header() {
           {/* Logo */}
           <Link href="/" className="absolute left-1/2 -translate-x-1/2 flex items-center justify-center group" aria-label="Acid Blue inicio">
             <Image
-              src="/images/acid/brand-logo-sticker.png"
+              src="/images/acid/brand-logo-horizontal.png"
               alt="Acid Blue"
-              width={140}
+              width={160}
               height={50}
               className="h-10 sm:h-11 w-auto object-contain transition-transform duration-300 group-hover:scale-105 drop-shadow-[0_2px_8px_rgba(94,213,255,0.25)]"
               priority
