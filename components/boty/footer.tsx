@@ -21,7 +21,8 @@ const footerLinks = {
     { name: "Consultas", href: "/" },
     { name: "Preguntas", href: "/" },
     { name: "Envío", href: "/" },
-    { name: "Devoluciones", href: "/" }
+    { name: "Devoluciones", href: "/" },
+    { name: "Panel Admin", href: "/admin" }
   ]
 }
 

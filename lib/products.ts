@@ -219,5 +219,18 @@ export function formatARS(value: number): string {
 }
 
 export function getProduct(id: string): Product | undefined {
+  if (typeof window !== "undefined") {
+    try {
+      const raw = localStorage.getItem("acid_blue_custom_products_v1")
+      if (raw) {
+        const custom = JSON.parse(raw) as Product[]
+        const found = custom.find((p) => p.id === id)
+        if (found) return found
+      }
+    } catch {
+      // Fallback to static list
+    }
+  }
   return products.find((p) => p.id === id)
 }
+

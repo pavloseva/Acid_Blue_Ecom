@@ -5,7 +5,8 @@ import Image from "next/image"
 import Link from "next/link"
 import { ShoppingBag } from "lucide-react"
 import { useCart } from "./cart-context"
-import { products, categoryLabels, formatARS, type Category } from "@/lib/products"
+import { products, categoryLabels, formatARS, type Category, type Product } from "@/lib/products"
+import { getAllProducts } from "@/lib/store"
 
 const categories: { value: Category; label: string }[] = [
   { value: "almohadon", label: categoryLabels.almohadon },
@@ -15,6 +16,7 @@ const categories: { value: Category; label: string }[] = [
 
 export function ProductGrid() {
   const [selectedCategory, setSelectedCategory] = useState<Category>("almohadon")
+  const [allProducts, setAllProducts] = useState<Product[]>(products)
   const [isVisible, setIsVisible] = useState(false)
   const [isTransitioning, setIsTransitioning] = useState(false)
   const [headerVisible, setHeaderVisible] = useState(false)
@@ -22,7 +24,16 @@ export function ProductGrid() {
   const headerRef = useRef<HTMLDivElement>(null)
   const { addItem } = useCart()
 
-  const filteredProducts = products.filter((product) => product.category === selectedCategory)
+  useEffect(() => {
+    const syncProducts = () => {
+      setAllProducts(getAllProducts())
+    }
+    syncProducts()
+    window.addEventListener("acid_store_updated", syncProducts)
+    return () => window.removeEventListener("acid_store_updated", syncProducts)
+  }, [])
+
+  const filteredProducts = allProducts.filter((product) => product.category === selectedCategory)
 
   const handleCategoryChange = (category: Category) => {
     if (category !== selectedCategory) {
@@ -158,6 +169,7 @@ export function ProductGrid() {
                     src={product.image || "/placeholder.svg"}
                     alt={product.name}
                     fill
+                    unoptimized
                     className="object-cover boty-transition group-hover:scale-105"
                   />
                   {/* Badge */}

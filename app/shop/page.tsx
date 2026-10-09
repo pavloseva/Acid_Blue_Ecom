@@ -8,6 +8,7 @@ import { Header } from "@/components/boty/header"
 import { Footer } from "@/components/boty/footer"
 import { useCart } from "@/components/boty/cart-context"
 import { products, categoryLabels, formatARS, type Category, type Product } from "@/lib/products"
+import { getAllProducts } from "@/lib/store"
 
 const filters: { value: "all" | Category; label: string }[] = [
   { value: "all", label: "Todo" },
@@ -18,12 +19,22 @@ const filters: { value: "all" | Category; label: string }[] = [
 
 export default function ShopPage() {
   const [selectedCategory, setSelectedCategory] = useState<"all" | Category>("all")
+  const [allProducts, setAllProducts] = useState<Product[]>(products)
   const [showFilters, setShowFilters] = useState(false)
   const [isVisible, setIsVisible] = useState(false)
   const gridRef = useRef<HTMLDivElement>(null)
 
+  useEffect(() => {
+    const syncProducts = () => {
+      setAllProducts(getAllProducts())
+    }
+    syncProducts()
+    window.addEventListener("acid_store_updated", syncProducts)
+    return () => window.removeEventListener("acid_store_updated", syncProducts)
+  }, [])
+
   const filteredProducts =
-    selectedCategory === "all" ? products : products.filter((p) => p.category === selectedCategory)
+    selectedCategory === "all" ? allProducts : allProducts.filter((p) => p.category === selectedCategory)
 
   useEffect(() => {
     const observer = new IntersectionObserver(
@@ -188,6 +199,7 @@ function ProductCard({
             src={product.image || "/placeholder.svg"}
             alt={product.name}
             fill
+            unoptimized
             className={`object-cover boty-transition group-hover:scale-105 transition-opacity duration-500 ${
               imageLoaded ? 'opacity-100' : 'opacity-0'
             }`}

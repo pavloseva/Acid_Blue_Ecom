@@ -14,6 +14,7 @@ import {
 import { useCart } from "./cart-context"
 import { useState } from "react"
 import { formatARS } from "@/lib/products"
+import { saveOrder } from "@/lib/store"
 
 export function CartDrawer() {
   const { items, removeItem, updateQuantity, isOpen, setIsOpen, itemCount, subtotal, clearCart } = useCart()
@@ -23,16 +24,50 @@ export function CartDrawer() {
 
   const [checkoutOpen, setCheckoutOpen] = useState(false)
   const [orderSuccess, setOrderSuccess] = useState(false)
+  const [confirmedOrderId, setConfirmedOrderId] = useState("")
+
+  const [customerName, setCustomerName] = useState("")
+  const [customerEmail, setCustomerEmail] = useState("")
+  const [customerAddress, setCustomerAddress] = useState("")
+  const [customerPhone, setCustomerPhone] = useState("")
 
   const handleCheckout = () => {
     setCheckoutOpen(true)
   }
 
   const handleOrderComplete = () => {
+    if (!customerName || !customerEmail || !customerAddress) return
+
+    const newOrder = saveOrder({
+      customer: {
+        name: customerName,
+        email: customerEmail,
+        address: customerAddress,
+        phone: customerPhone,
+      },
+      items: items.map((item) => ({
+        id: item.id,
+        name: item.name,
+        description: item.description,
+        price: item.price,
+        quantity: item.quantity,
+        image: item.image,
+      })),
+      subtotal,
+      shipping,
+      total,
+    })
+
+    setConfirmedOrderId(newOrder.id)
     setCheckoutOpen(false)
     clearCart()
     setIsOpen(false)
     setOrderSuccess(true)
+
+    setCustomerName("")
+    setCustomerEmail("")
+    setCustomerAddress("")
+    setCustomerPhone("")
   }
 
   const handleCloseSuccess = () => {
@@ -73,6 +108,7 @@ export function CartDrawer() {
                         src={item.image || "/placeholder.svg"}
                         alt={item.name}
                         fill
+                        unoptimized
                         className="object-cover"
                       />
                     </div>
@@ -164,12 +200,15 @@ export function CartDrawer() {
                   <h3 className="font-serif text-xl text-foreground">Completa tu pedido</h3>
                   <div>
                     <label className="text-sm font-medium text-foreground">
-                      Nombre
+                      Nombre y Apellido
                       <span className="text-muted-foreground">*</span>
                     </label>
                     <input
                       type="text"
                       required
+                      value={customerName}
+                      onChange={(e) => setCustomerName(e.target.value)}
+                      placeholder="Ej: Sofía Pérez"
                       className="mt-1 block w-full rounded-lg border border-border bg-background px-3 py-2 text-foreground transition-colors focus:border-primary"
                     />
                   </div>
@@ -181,17 +220,36 @@ export function CartDrawer() {
                     <input
                       type="email"
                       required
+                      value={customerEmail}
+                      onChange={(e) => setCustomerEmail(e.target.value)}
+                      placeholder="tu@email.com"
                       className="mt-1 block w-full rounded-lg border border-border bg-background px-3 py-2 text-foreground transition-colors focus:border-primary"
                     />
                   </div>
                   <div>
                     <label className="text-sm font-medium text-foreground">
-                      Dirección
+                      Dirección de entrega (con Ciudad)
                       <span className="text-muted-foreground">*</span>
                     </label>
                     <input
                       type="text"
                       required
+                      value={customerAddress}
+                      onChange={(e) => setCustomerAddress(e.target.value)}
+                      placeholder="Calle, altura, piso/depto, Ciudad"
+                      className="mt-1 block w-full rounded-lg border border-border bg-background px-3 py-2 text-foreground transition-colors focus:border-primary"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-foreground">
+                      Teléfono / WhatsApp
+                      <span className="text-muted-foreground text-xs ml-1">(opcional)</span>
+                    </label>
+                    <input
+                      type="tel"
+                      value={customerPhone}
+                      onChange={(e) => setCustomerPhone(e.target.value)}
+                      placeholder="+54 9 351 ..."
                       className="mt-1 block w-full rounded-lg border border-border bg-background px-3 py-2 text-foreground transition-colors focus:border-primary"
                     />
                   </div>
@@ -200,7 +258,7 @@ export function CartDrawer() {
                     type="submit"
                     className="w-full bg-primary text-primary-foreground py-3 rounded-full font-medium hover:bg-primary/90 boty-transition"
                   >
-                    Realizar pedido
+                    Confirmar pedido
                   </button>
                   <button
                     type="button"
@@ -230,11 +288,16 @@ export function CartDrawer() {
       {/* Order Success Modal - OUTSIDE the drawer so fixed positioning works */}
       {orderSuccess && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-background/80 backdrop-blur-sm">
-          <div className="bg-card rounded-3xl p-8 text-center border border-border boty-shadow max-w-sm mx-4">
-            <CheckCircle className="w-16 h-16 mx-auto mb-6 text-primary" />
+          <div className="bg-card rounded-3xl p-8 text-center border border-border boty-shadow max-w-sm mx-4 animate-scale-fade-in">
+            <CheckCircle className="w-16 h-16 mx-auto mb-4 text-primary" />
+            {confirmedOrderId && (
+              <span className="inline-block px-3 py-1 bg-primary/10 text-primary border border-primary/20 rounded-full text-xs font-mono font-medium mb-3">
+                {confirmedOrderId}
+              </span>
+            )}
             <h3 className="font-serif text-2xl text-foreground mb-2">¡Gracias por tu pedido!</h3>
-            <p className="text-muted-foreground mb-6">
-              Tu pedido ha sido recibido. Te enviaremos un correo con los detalles pronto.
+            <p className="text-muted-foreground mb-6 text-sm">
+              Tu orden quedó registrada con éxito. Ya la estamos preparando y te avisaremos por mail cuando sea despachada.
             </p>
             <button
               type="button"

@@ -22,10 +22,17 @@ type AccordionSection = "details" | "care" | "material" | "delivery"
 export default function ProductPage() {
   const params = useParams()
   const productId = params.id as string
-  const product = getProduct(productId) || products[0]
+  const [product, setProduct] = useState<Product>(() => getProduct(productId) || products[0])
+
+  useEffect(() => {
+    const found = getProduct(productId)
+    if (found) {
+      setProduct(found)
+    }
+  }, [productId])
 
   const { addItem, setIsOpen } = useCart()
-  const [selectedOption, setSelectedOption] = useState(product.options[0])
+  const [selectedOption, setSelectedOption] = useState(product?.options?.[0] || "Único")
   const [quantity, setQuantity] = useState(1)
   const [openAccordion, setOpenAccordion] = useState<AccordionSection | null>("details")
   const [isAdded, setIsAdded] = useState(false)
@@ -89,6 +96,7 @@ export default function ProductPage() {
                 src={product.image || "/placeholder.svg"}
                 alt={product.name}
                 fill
+                unoptimized
                 className="object-cover"
                 priority
               />
@@ -258,6 +266,7 @@ export default function ProductPage() {
                           src={item.image || "/placeholder.svg"}
                           alt={item.name}
                           fill
+                          unoptimized
                           className="object-cover boty-transition group-hover:scale-105"
                         />
                       </div>

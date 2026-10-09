@@ -85,9 +85,10 @@ export function Header() {
               <Search className="w-5 h-5" />
             </button>
             <Link
-              href="/#nosotros"
+              href="/admin"
               className="hidden sm:block p-2 text-foreground/70 hover:text-primary boty-transition"
-              aria-label="Cuenta"
+              aria-label="Panel Administrador"
+              title="Panel Administrador"
             >
               <User className="w-5 h-5" />
             </Link>
@@ -125,6 +126,9 @@ export function Header() {
             </Link>
             <Link href="/#envios" className="text-sm tracking-wide text-foreground/70 hover:text-primary boty-transition">
               Envíos
+            </Link>
+            <Link href="/admin" className="text-sm tracking-wide text-primary hover:underline boty-transition font-medium">
+              Panel Administrador
             </Link>
           </div>
         </div>
