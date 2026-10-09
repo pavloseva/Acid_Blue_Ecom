@@ -1,6 +1,7 @@
 "use client"
 
 import Link from "next/link"
+import Image from "next/image"
 import { Instagram, Facebook, Twitter } from "lucide-react"
 
 const footerLinks = {
@@ -31,7 +32,7 @@ export function Footer() {
     <footer className="bg-card pt-20 pb-10 relative overflow-hidden">
       {/* Giant Background Text */}
       <div className="absolute bottom-0 left-1/2 -translate-x-1/2 pointer-events-none select-none z-0">
-        <span className="font-serif text-[200px] sm:text-[200px] md:text-[400px] lg:text-[400px] xl:text-[400px] font-bold text-white/20 whitespace-nowrap leading-none">
+        <span className="font-serif text-[200px] sm:text-[200px] md:text-[400px] lg:text-[400px] xl:text-[400px] font-bold text-white/5 whitespace-nowrap leading-none">
           Acid Blue
         </span>
       </div>
@@ -40,9 +41,23 @@ export function Footer() {
         <div className="grid grid-cols-2 md:grid-cols-4 gap-10 mb-16">
           {/* Brand */}
           <div className="col-span-2 md:col-span-1">
-            <h2 className="font-serif text-3xl text-foreground mb-4">Acid Blue</h2>
+            <Link href="/" className="inline-block mb-3">
+              <Image
+                src="/images/acid/brand-logo-sticker.png"
+                alt="Acid Blue"
+                width={150}
+                height={55}
+                className="h-12 w-auto object-contain"
+              />
+            </Link>
+            <p className="font-script text-2xl text-primary mb-1">
+              Cute things, big vibes
+            </p>
+            <p className="text-[11px] uppercase tracking-wider text-accent/80 font-medium mb-3">
+              Pillows • Bags • Accessories — DTF & Sublimation
+            </p>
             <p className="text-sm text-muted-foreground leading-relaxed mb-6">
-              Arte urbano y expresión alternativa desde 2026. Cada pieza impresa con pasión en Córdoba Capital.
+              Functional things, with personality. Made to brighten your everyday. Cute, comfy & always a little extra.
             </p>
             <div className="flex gap-4">
               <a

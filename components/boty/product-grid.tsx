@@ -121,7 +121,7 @@ export function ProductGrid() {
             className={`text-lg text-muted-foreground max-w-md mx-auto ${headerVisible ? 'animate-blur-in opacity-0' : 'opacity-0'}`}
             style={headerVisible ? { animationDelay: '0.6s', animationFillMode: 'forwards' } : {}}
           >
-            Estampas únicas impresas en almohadones, posters y tazas
+            Almohadones, bolsos y accesorios hechos con tecnología DTF & Sublimación
           </p>
         </div>
 

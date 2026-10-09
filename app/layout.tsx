@@ -1,31 +1,37 @@
 import React from "react"
 import type { Metadata, Viewport } from 'next'
-import { DM_Sans, Space_Grotesk } from 'next/font/google'
+import { Poppins } from 'next/font/google'
+import localFont from 'next/font/local'
 import { Analytics } from '@vercel/analytics/next'
 import { CartProvider } from '@/components/boty/cart-context'
 import './globals.css'
 
-const dmSans = DM_Sans({
+const poppins = Poppins({
   subsets: ["latin"],
-  variable: '--font-dm-sans',
-  weight: ['300', '400', '500', '600']
+  variable: '--font-poppins',
+  weight: ['300', '400', '500', '600', '700'],
+  display: 'swap',
 });
 
-const spaceGrotesk = Space_Grotesk({
-  subsets: ["latin"],
-  variable: '--font-space-grotesk',
-  weight: ['400', '500', '600', '700']
+const playlistScript = localFont({
+  src: './fonts/Playlist-Script.otf',
+  variable: '--font-playlist',
+  display: 'swap',
 });
 
 export const metadata: Metadata = {
-  title: 'Acid Blue — Almohadones y arte impreso',
-  description: 'Almohadones, posters y tazas con arte impreso. Envíos a todo el país desde Córdoba Capital. Stay.',
+  title: 'Acid Blue — Cute things, big vibes',
+  description: 'Almohadones, bolsos y accesorios con personalidad. DTF & Sublimación desde Córdoba Capital.',
   generator: 'v0.app',
-  keywords: ['almohadones', 'posters', 'tazas', 'arte impreso', 'kpop', 'Córdoba', 'Argentina', 'Acid Blue'],
+  keywords: ['almohadones', 'bolsos', 'accesorios', 'DTF', 'sublimacion', 'arte impreso', 'kpop', 'Córdoba', 'Argentina', 'Acid Blue'],
+  icons: {
+    icon: '/favicon.ico',
+    apple: '/apple-icon.png',
+  },
 }
 
 export const viewport: Viewport = {
-  themeColor: '#090b10',
+  themeColor: '#0A0A0A',
 }
 
 export default function RootLayout({
@@ -35,7 +41,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="es" className="dark bg-background">
-      <body className={`${dmSans.variable} ${spaceGrotesk.variable} font-sans antialiased`}>
+      <body className={`${poppins.variable} ${playlistScript.variable} font-sans antialiased`}>
         <CartProvider>
           {children}
         </CartProvider>

@@ -66,23 +66,21 @@ export default function AdminLoginPage() {
       <div className="w-full max-w-md bg-card border border-border/80 rounded-3xl p-8 boty-shadow relative z-10 animate-scale-fade-in">
         {/* Logo and Brand */}
         <div className="text-center mb-8">
-          <div className="acid-ring inline-flex mb-4">
-            <span className="rounded-full overflow-hidden bg-background block">
-              <Image
-                src="/images/acid/Logo-Acid-Blue.png"
-                alt="Acid Blue"
-                width={56}
-                height={56}
-                className="w-14 h-14 rounded-full object-cover"
-                priority
-              />
-            </span>
+          <div className="inline-flex justify-center mb-4">
+            <Image
+              src="/images/acid/brand-logo-sticker.png"
+              alt="Acid Blue"
+              width={160}
+              height={60}
+              className="h-14 w-auto object-contain drop-shadow-[0_4px_12px_rgba(94,213,255,0.3)]"
+              priority
+            />
           </div>
-          <h1 className="font-serif text-3xl font-bold text-foreground tracking-wide">
-            Acid Blue
+          <h1 className="font-sans text-2xl font-bold text-foreground tracking-wide">
+            Panel de Administración
           </h1>
           <p className="text-sm text-muted-foreground mt-1">
-            Panel de administración y gestión de órdenes
+            Gestión de pedidos, catálogo y stock
           </p>
         </div>
 

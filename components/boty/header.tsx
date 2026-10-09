@@ -57,22 +57,15 @@ export function Header() {
           </div>
 
           {/* Logo */}
-          <Link href="/" className="absolute left-1/2 -translate-x-1/2 flex items-center gap-3" aria-label="Acid Blue inicio">
-            <span className="acid-ring inline-flex">
-              <span className="rounded-full overflow-hidden bg-background block">
-                <Image
-                  src="/images/acid/Logo-Acid-Blue.png"
-                  alt="Acid Blue"
-                  width={40}
-                  height={40}
-                  className="w-9 h-9 rounded-full object-cover"
-                  priority
-                />
-              </span>
-            </span>
-            <span className="hidden sm:block font-serif text-xl font-semibold tracking-wide text-foreground">
-              Acid Blue
-            </span>
+          <Link href="/" className="absolute left-1/2 -translate-x-1/2 flex items-center justify-center group" aria-label="Acid Blue inicio">
+            <Image
+              src="/images/acid/brand-logo-sticker.png"
+              alt="Acid Blue"
+              width={140}
+              height={50}
+              className="h-10 sm:h-11 w-auto object-contain transition-transform duration-300 group-hover:scale-105 drop-shadow-[0_2px_8px_rgba(94,213,255,0.25)]"
+              priority
+            />
           </Link>
 
           {/* Right Actions */}

@@ -522,19 +522,17 @@ Total: ${formatARS(order.total)}`
       <div className="min-h-screen bg-background flex flex-col justify-center items-center px-4 py-12 relative overflow-hidden">
         <div className="w-full max-w-md bg-card border border-border/80 rounded-3xl p-8 boty-shadow relative z-10 animate-scale-fade-in">
           <div className="text-center mb-8">
-            <div className="acid-ring inline-flex mb-4">
-              <span className="rounded-full overflow-hidden bg-background block">
-                <Image
-                  src="/images/acid/Logo-Acid-Blue.png"
-                  alt="Acid Blue"
-                  width={56}
-                  height={56}
-                  className="w-14 h-14 rounded-full object-cover"
-                  priority
-                />
-              </span>
+            <div className="inline-flex justify-center mb-4">
+              <Image
+                src="/images/acid/brand-logo-sticker.png"
+                alt="Acid Blue"
+                width={160}
+                height={60}
+                className="h-14 w-auto object-contain drop-shadow-[0_4px_12px_rgba(94,213,255,0.3)]"
+                priority
+              />
             </div>
-            <h1 className="font-serif text-3xl font-bold text-foreground">Acceso de Administrador</h1>
+            <h1 className="font-sans text-2xl font-bold text-foreground">Acceso de Administrador</h1>
             <p className="text-sm text-muted-foreground mt-1">
               Ingresá tus credenciales para gestionar órdenes y catálogo
             </p>
@@ -603,26 +601,17 @@ Total: ${formatARS(order.total)}`
       <header className="sticky top-0 z-40 bg-card/90 backdrop-blur-md border-b border-border/80 px-4 lg:px-8 py-3.5">
         <div className="max-w-7xl mx-auto flex items-center justify-between gap-4">
           <div className="flex items-center gap-4">
-            <Link href="/" className="flex items-center gap-3">
-              <span className="acid-ring inline-flex">
-                <span className="rounded-full overflow-hidden bg-background block">
-                  <Image
-                    src="/images/acid/Logo-Acid-Blue.png"
-                    alt="Acid Blue"
-                    width={36}
-                    height={36}
-                    className="w-9 h-9 rounded-full object-cover"
-                  />
-                </span>
+            <Link href="/" className="flex items-center gap-3 group">
+              <Image
+                src="/images/acid/brand-logo-sticker.png"
+                alt="Acid Blue"
+                width={120}
+                height={40}
+                className="h-9 w-auto object-contain transition-transform group-hover:scale-105"
+              />
+              <span className="text-[11px] uppercase tracking-wider font-semibold text-primary/90 bg-primary/10 border border-primary/20 px-2 py-0.5 rounded-full">
+                Admin
               </span>
-              <div>
-                <span className="font-serif text-lg font-bold text-foreground tracking-wide block leading-none">
-                  Acid Blue
-                </span>
-                <span className="text-[11px] text-primary font-mono font-medium">
-                  Panel de Control
-                </span>
-              </div>
             </Link>
 
             {/* Tab switchers */}

@@ -17,32 +17,37 @@ export function Hero() {
             {/* Copy */}
             <div className="text-center lg:text-left">
               <span
-                className="inline-flex items-center gap-2 text-xs uppercase tracking-[0.25em] mb-6 text-primary animate-blur-in opacity-0"
+                className="inline-flex items-center gap-2 text-xs uppercase tracking-[0.25em] mb-4 text-primary animate-blur-in opacity-0"
                 style={{ animationDelay: '0.2s', animationFillMode: 'forwards' }}
               >
                 <MapPin className="w-3.5 h-3.5" />
-                Córdoba Capital · Envíos a todo el país
+                Córdoba Capital · DTF & Sublimación
               </span>
-              <h1 className="font-serif text-5xl md:text-6xl xl:text-7xl leading-[1.05] mb-6 text-balance text-foreground">
+              <div
+                className="font-script text-3xl sm:text-4xl text-accent mb-2 animate-blur-in opacity-0"
+                style={{ animationDelay: '0.3s', animationFillMode: 'forwards' }}
+              >
+                Cute things, big vibes ✦
+              </div>
+              <h1 className="font-sans text-4xl sm:text-5xl md:text-6xl xl:text-7xl font-bold tracking-tight leading-[1.08] mb-6 text-balance text-foreground">
                 <span
-                  className="block animate-blur-in opacity-0 font-semibold"
+                  className="block animate-blur-in opacity-0"
                   style={{ animationDelay: '0.4s', animationFillMode: 'forwards' }}
                 >
                   Tu arte favorito,
                 </span>
                 <span
-                  className="block animate-blur-in opacity-0 font-bold acid-gradient-text"
+                  className="block animate-blur-in opacity-0 acid-gradient-text"
                   style={{ animationDelay: '0.6s', animationFillMode: 'forwards' }}
                 >
                   impreso en todo.
                 </span>
               </h1>
               <p
-                className="text-lg leading-relaxed mb-10 max-w-md mx-auto lg:mx-0 text-muted-foreground animate-blur-in opacity-0"
+                className="text-base sm:text-lg leading-relaxed mb-10 max-w-md mx-auto lg:mx-0 text-muted-foreground animate-blur-in opacity-0"
                 style={{ animationDelay: '0.8s', animationFillMode: 'forwards' }}
               >
-                Almohadones, posters y tazas con estampas únicas. Diseños de tus artistas
-                e ídolos, hechos para acompañarte todos los días.
+                Almohadones, bolsos y accesorios con personalidad. Diseños únicos hechos para alegrar tu día a día con la mejor calidad DTF & Sublimación.
               </p>
               <div
                 className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start animate-blur-in opacity-0"
