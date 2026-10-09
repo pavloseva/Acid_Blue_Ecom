@@ -6,7 +6,7 @@ import Link from "next/link"
 import { ShoppingBag } from "lucide-react"
 import { useCart } from "./cart-context"
 import { products, categoryLabels, formatARS, type Category, type Product } from "@/lib/products"
-import { getAllProducts } from "@/lib/store"
+import { getAllProducts, syncStoreWithCloud } from "@/lib/store"
 
 const categories: { value: Category; label: string }[] = [
   { value: "almohadon", label: categoryLabels.almohadon },
@@ -29,6 +29,7 @@ export function ProductGrid() {
       setAllProducts(getAllProducts())
     }
     syncProducts()
+    syncStoreWithCloud()
     window.addEventListener("acid_store_updated", syncProducts)
     return () => window.removeEventListener("acid_store_updated", syncProducts)
   }, [])

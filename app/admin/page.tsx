@@ -54,6 +54,8 @@ import {
   addCustomProduct,
   updateProduct,
   deleteProduct,
+  syncStoreWithCloud,
+  uploadMediaToCloud,
   getEmails,
   sendNewsletterWelcomeEmail,
   sendOrderConfirmationEmail,
@@ -181,6 +183,7 @@ export default function AdminDashboardPage() {
     setIsAuthenticated(authed)
     if (authed) {
       syncStore()
+      syncStoreWithCloud().then(() => syncStore())
     }
 
     const handleUpdate = () => {
@@ -197,6 +200,7 @@ export default function AdminDashboardPage() {
     if (ok) {
       setIsAuthenticated(true)
       syncStore()
+      syncStoreWithCloud().then(() => syncStore())
     } else {
       setLoginError("Credenciales incorrectas. Verificá tu usuario y contraseña.")
     }
@@ -256,20 +260,32 @@ Total: ${formatARS(order.total)}`
       if (!file.type.startsWith("image/")) continue
 
       let fileUrl = ""
-      // Try server upload API
+      // 1. Try Supabase Cloud Storage first!
       try {
-        const formData = new FormData()
-        formData.append("file", file)
-        const res = await fetch("/api/upload", { method: "POST", body: formData })
-        if (res.ok) {
-          const data = await res.json()
-          if (data.url) fileUrl = data.url
+        const cloudUrl = await uploadMediaToCloud(file)
+        if (cloudUrl) {
+          fileUrl = cloudUrl
         }
       } catch (err) {
-        console.warn("Fallo /api/upload, usando fallback Base64:", err)
+        console.warn("Supabase Storage error:", err)
       }
 
-      // Fallback FileReader
+      // 2. Try server upload API fallback
+      if (!fileUrl) {
+        try {
+          const formData = new FormData()
+          formData.append("file", file)
+          const res = await fetch("/api/upload", { method: "POST", body: formData })
+          if (res.ok) {
+            const data = await res.json()
+            if (data.url) fileUrl = data.url
+          }
+        } catch (err) {
+          console.warn("Fallo /api/upload, usando fallback Base64:", err)
+        }
+      }
+
+      // 3. Fallback FileReader
       if (!fileUrl) {
         try {
           const base64 = await new Promise<string>((resolve, reject) => {
@@ -302,6 +318,18 @@ Total: ${formatARS(order.total)}`
     if (!file) return
     setIsUploadingVideo(true)
     setUploadError("")
+
+    // 1. Try Supabase Cloud Storage first!
+    try {
+      const cloudUrl = await uploadMediaToCloud(file)
+      if (cloudUrl) {
+        setNewProductVideo(cloudUrl)
+        setIsUploadingVideo(false)
+        return
+      }
+    } catch (err) {
+      console.warn("Error subiendo video a Supabase:", err)
+    }
 
     try {
       const formData = new FormData()

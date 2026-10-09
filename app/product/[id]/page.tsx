@@ -25,7 +25,7 @@ import { Header } from "@/components/boty/header"
 import { Footer } from "@/components/boty/footer"
 import { useCart } from "@/components/boty/cart-context"
 import { products, getProduct, formatARS, type Product } from "@/lib/products"
-import { getProductById } from "@/lib/store"
+import { getProductById, syncStoreWithCloud } from "@/lib/store"
 
 const benefits = [
   { icon: Truck, label: "Envío a todo el país" },
@@ -66,6 +66,7 @@ export default function ProductPage() {
       }
     }
     sync()
+    syncStoreWithCloud()
     window.addEventListener("acid_store_updated", sync)
     return () => window.removeEventListener("acid_store_updated", sync)
   }, [productId])

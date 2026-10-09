@@ -1,6 +1,18 @@
 "use client"
 
 import { products as baseProducts, type Product, type Category } from "./products"
+import {
+  fetchProductsFromCloud,
+  saveProductToCloud,
+  updateProductInCloud,
+  deleteProductFromCloud,
+  fetchOrdersFromCloud,
+  saveOrderToCloud,
+  updateOrderStatusInCloud,
+  uploadMediaToCloud,
+} from "./supabase"
+
+export { uploadMediaToCloud }
 
 export type OrderStatus = "pendiente" | "en_preparacion" | "enviado" | "entregado" | "cancelado"
 
@@ -176,6 +188,11 @@ export function saveOrder(newOrderData: {
     }
   }
 
+  // Persist to Supabase Cloud Database!
+  saveOrderToCloud(newOrder).catch((err) =>
+    console.warn("Error saving order to Supabase:", err)
+  )
+
   // Automatically trigger customer order email
   sendOrderConfirmationEmail(newOrder)
 
@@ -188,6 +205,28 @@ export function updateOrderStatus(orderId: string, status: OrderStatus): void {
   if (isClient()) {
     localStorage.setItem(ORDERS_KEY, JSON.stringify(updated))
     notifyStoreChange()
+  }
+  updateOrderStatusInCloud(orderId, status).catch((err) =>
+    console.warn("Error updating order in Supabase:", err)
+  )
+}
+
+export async function syncStoreWithCloud(): Promise<void> {
+  if (!isClient()) return
+  try {
+    const [cloudProducts, cloudOrders] = await Promise.all([
+      fetchProductsFromCloud(),
+      fetchOrdersFromCloud(),
+    ])
+    if (cloudProducts && cloudProducts.length > 0) {
+      localStorage.setItem(PRODUCTS_KEY, JSON.stringify(cloudProducts))
+    }
+    if (cloudOrders && cloudOrders.length > 0) {
+      localStorage.setItem(ORDERS_KEY, JSON.stringify(cloudOrders))
+    }
+    notifyStoreChange()
+  } catch (err) {
+    console.warn("Error syncing store with cloud:", err)
   }
 }
 
@@ -282,16 +321,24 @@ export function addCustomProduct(newProduct: Omit<Product, "id"> & { id?: string
     images: newProduct.images && newProduct.images.length > 0 ? newProduct.images : [newProduct.image],
   }
 
-  const updated = [productToSave, ...custom]
+    const updated = [productToSave, ...custom]
   if (isClient()) {
     localStorage.setItem(PRODUCTS_KEY, JSON.stringify(updated))
     notifyStoreChange()
   }
+  saveProductToCloud(productToSave).catch((err) =>
+    console.warn("Error saving product to Supabase:", err)
+  )
   return productToSave
 }
 
 export function updateProduct(id: string, updatedFields: Partial<Product>): Product | null {
   if (!isClient()) return null
+
+  // Update in cloud
+  updateProductInCloud(id, updatedFields).catch((err) =>
+    console.warn("Error updating product in Supabase:", err)
+  )
 
   const custom = getCustomProducts()
   const customIndex = custom.findIndex((p) => p.id === id)
@@ -323,6 +370,11 @@ export function updateProduct(id: string, updatedFields: Partial<Product>): Prod
 
 export function deleteProduct(id: string): boolean {
   if (!isClient()) return false
+
+  // Delete from cloud
+  deleteProductFromCloud(id).catch((err) =>
+    console.warn("Error deleting product from Supabase:", err)
+  )
 
   // Check if it's a custom product
   const custom = getCustomProducts()

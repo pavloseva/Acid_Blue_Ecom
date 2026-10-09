@@ -8,7 +8,7 @@ import { Header } from "@/components/boty/header"
 import { Footer } from "@/components/boty/footer"
 import { useCart } from "@/components/boty/cart-context"
 import { products, categoryLabels, formatARS, type Category, type Product } from "@/lib/products"
-import { getAllProducts } from "@/lib/store"
+import { getAllProducts, syncStoreWithCloud } from "@/lib/store"
 
 const filters: { value: "all" | Category; label: string }[] = [
   { value: "all", label: "Todo" },
@@ -29,6 +29,7 @@ export default function ShopPage() {
       setAllProducts(getAllProducts())
     }
     syncProducts()
+    syncStoreWithCloud()
     window.addEventListener("acid_store_updated", syncProducts)
     return () => window.removeEventListener("acid_store_updated", syncProducts)
   }, [])
