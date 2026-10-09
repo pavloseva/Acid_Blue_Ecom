@@ -30,44 +30,52 @@ export function CartDrawer() {
   const [customerEmail, setCustomerEmail] = useState("")
   const [customerAddress, setCustomerAddress] = useState("")
   const [customerPhone, setCustomerPhone] = useState("")
+  const [isSubmitting, setIsSubmitting] = useState(false)
 
   const handleCheckout = () => {
     setCheckoutOpen(true)
   }
 
-  const handleOrderComplete = () => {
+  const handleOrderComplete = async () => {
     if (!customerName || !customerEmail || !customerAddress) return
+    setIsSubmitting(true)
 
-    const newOrder = saveOrder({
-      customer: {
-        name: customerName,
-        email: customerEmail,
-        address: customerAddress,
-        phone: customerPhone,
-      },
-      items: items.map((item) => ({
-        id: item.id,
-        name: item.name,
-        description: item.description,
-        price: item.price,
-        quantity: item.quantity,
-        image: item.image,
-      })),
-      subtotal,
-      shipping,
-      total,
-    })
+    try {
+      const newOrder = await saveOrder({
+        customer: {
+          name: customerName,
+          email: customerEmail,
+          address: customerAddress,
+          phone: customerPhone,
+        },
+        items: items.map((item) => ({
+          id: item.id,
+          name: item.name,
+          description: item.description,
+          price: item.price,
+          quantity: item.quantity,
+          image: item.image,
+        })),
+        subtotal,
+        shipping,
+        total,
+      })
 
-    setConfirmedOrderId(newOrder.id)
-    setCheckoutOpen(false)
-    clearCart()
-    setIsOpen(false)
-    setOrderSuccess(true)
+      setConfirmedOrderId(newOrder.id)
+      setCheckoutOpen(false)
+      clearCart()
+      setIsOpen(false)
+      setOrderSuccess(true)
 
-    setCustomerName("")
-    setCustomerEmail("")
-    setCustomerAddress("")
-    setCustomerPhone("")
+      setCustomerName("")
+      setCustomerEmail("")
+      setCustomerAddress("")
+      setCustomerPhone("")
+    } catch (err) {
+      console.error("Error al procesar el pedido:", err)
+    } finally {
+      setIsSubmitting(false)
+    }
   }
 
   const handleCloseSuccess = () => {
@@ -256,9 +264,17 @@ export function CartDrawer() {
 
                   <button
                     type="submit"
-                    className="w-full bg-primary text-primary-foreground py-3 rounded-full font-medium hover:bg-primary/90 boty-transition"
+                    disabled={isSubmitting}
+                    className="w-full bg-primary text-primary-foreground py-3.5 rounded-full font-medium hover:bg-primary/90 boty-transition disabled:opacity-50 flex items-center justify-center gap-2"
                   >
-                    Confirmar pedido
+                    {isSubmitting ? (
+                      <>
+                        <span className="w-4 h-4 border-2 border-primary-foreground/30 border-t-primary-foreground rounded-full animate-spin" />
+                        Procesando pedido...
+                      </>
+                    ) : (
+                      "Confirmar pedido"
+                    )}
                   </button>
                   <button
                     type="button"

@@ -170,11 +170,23 @@ export default function AdminDashboardPage() {
   const [newProductOptions, setNewProductOptions] = useState("40x40, 50x50")
   const [newProductBadge, setNewProductBadge] = useState("Nuevo")
 
+  const [isSyncing, setIsSyncing] = useState(false)
+
   // Check auth and sync state
   const syncStore = () => {
     setOrders(getOrders())
     setProductsList(getAllProducts())
     setEmailsList(getEmails())
+  }
+
+  const refreshFromCloud = async () => {
+    setIsSyncing(true)
+    try {
+      await syncStoreWithCloud()
+      syncStore()
+    } finally {
+      setIsSyncing(false)
+    }
   }
 
   useEffect(() => {
@@ -183,14 +195,25 @@ export default function AdminDashboardPage() {
     setIsAuthenticated(authed)
     if (authed) {
       syncStore()
-      syncStoreWithCloud().then(() => syncStore())
+      refreshFromCloud()
     }
 
     const handleUpdate = () => {
       syncStore()
     }
     window.addEventListener("acid_store_updated", handleUpdate)
-    return () => window.removeEventListener("acid_store_updated", handleUpdate)
+
+    // Polling interval: automatically query Supabase every 15s for incoming orders
+    const pollInterval = setInterval(() => {
+      if (isAdminAuthenticated()) {
+        syncStoreWithCloud().then(() => syncStore())
+      }
+    }, 15000)
+
+    return () => {
+      window.removeEventListener("acid_store_updated", handleUpdate)
+      clearInterval(pollInterval)
+    }
   }, [])
 
   const handleInlineLogin = (e: React.FormEvent) => {
@@ -606,7 +629,10 @@ Total: ${formatARS(order.total)}`
             <div className="hidden sm:flex items-center gap-1.5 ml-6 bg-background/80 p-1 rounded-xl border border-border">
               <button
                 type="button"
-                onClick={() => setActiveTab("orders")}
+                onClick={() => {
+                  setActiveTab("orders")
+                  refreshFromCloud()
+                }}
                 className={`px-4 py-1.5 rounded-lg text-xs font-medium boty-transition flex items-center gap-2 ${
                   activeTab === "orders"
                     ? "bg-primary text-primary-foreground shadow-sm"
@@ -774,6 +800,17 @@ Total: ${formatARS(order.total)}`
               <div className="flex items-center gap-3">
                 <button
                   type="button"
+                  disabled={isSyncing}
+                  onClick={refreshFromCloud}
+                  className="inline-flex items-center gap-1.5 text-xs px-3.5 py-2 rounded-xl bg-primary text-primary-foreground hover:bg-primary/90 font-medium boty-transition disabled:opacity-50 shadow-sm"
+                  title="Sincronizar pedidos con la base de datos en Supabase"
+                >
+                  <RefreshCw className={`w-3.5 h-3.5 ${isSyncing ? "animate-spin" : ""}`} />
+                  {isSyncing ? "Sincronizando..." : "Actualizar Pedidos"}
+                </button>
+
+                <button
+                  type="button"
                   onClick={() => {
                     if (window.confirm("¿Restablecer órdenes de prueba demo?")) {
                       resetSampleOrders()
@@ -782,7 +819,6 @@ Total: ${formatARS(order.total)}`
                   }}
                   className="inline-flex items-center gap-1.5 text-xs px-3.5 py-2 rounded-xl bg-background border border-border hover:bg-muted text-muted-foreground hover:text-foreground boty-transition"
                 >
-                  <RefreshCw className="w-3.5 h-3.5" />
                   Cargar Demo
                 </button>
               </div>

@@ -109,9 +109,7 @@ function mapOrderToDb(o: Order) {
     customer_address: o.customer?.address || "",
     customer_notes: o.customer?.notes || null,
     items: o.items || [],
-    subtotal: o.subtotal || 0,
-    shipping: o.shipping || 0,
-    total: o.total || 0,
+    total: Number(o.total) || 0,
     status: o.status || "pendiente",
     payment_method: (o as any).paymentMethod || "transferencia",
   }
@@ -234,6 +232,19 @@ export async function updateOrderStatusInCloud(id: string, status: OrderStatus):
     return res.ok
   } catch (err) {
     console.error("Error updating order in Supabase:", err)
+    return false
+  }
+}
+
+export async function deleteOrderFromCloud(id: string): Promise<boolean> {
+  try {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/orders?id=eq.${encodeURIComponent(id)}`, {
+      method: "DELETE",
+      headers: getHeaders(),
+    })
+    return res.ok
+  } catch (err) {
+    console.error("Error deleting order from Supabase:", err)
     return false
   }
 }

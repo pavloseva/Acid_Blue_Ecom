@@ -9,6 +9,7 @@ import {
   fetchOrdersFromCloud,
   saveOrderToCloud,
   updateOrderStatusInCloud,
+  deleteOrderFromCloud,
   uploadMediaToCloud,
 } from "./supabase"
 
@@ -188,13 +189,13 @@ export function getOrders(): Order[] {
   }
 }
 
-export function saveOrder(newOrderData: {
+export async function saveOrder(newOrderData: {
   customer: OrderCustomer
   items: OrderItem[]
   subtotal: number
   shipping: number
   total: number
-}): Order {
+}): Promise<Order> {
   const currentOrders = getOrders()
   const randomSuffix = Math.floor(1000 + Math.random() * 9000)
   const orderId = `ORD-2026-${randomSuffix}`
@@ -222,9 +223,11 @@ export function saveOrder(newOrderData: {
   }
 
   // Persist to Supabase Cloud Database!
-  saveOrderToCloud(newOrder).catch((err) =>
+  try {
+    await saveOrderToCloud(newOrder)
+  } catch (err) {
     console.warn("Error saving order to Supabase:", err)
-  )
+  }
 
   // Automatically trigger customer order email
   sendOrderConfirmationEmail(newOrder)
@@ -254,7 +257,7 @@ export async function syncStoreWithCloud(): Promise<void> {
     if (cloudProducts && cloudProducts.length > 0) {
       localStorage.setItem(PRODUCTS_KEY, JSON.stringify(cloudProducts))
     }
-    if (cloudOrders && cloudOrders.length > 0) {
+    if (Array.isArray(cloudOrders) && cloudOrders.length > 0) {
       localStorage.setItem(ORDERS_KEY, JSON.stringify(cloudOrders))
     }
     notifyStoreChange()
@@ -270,6 +273,9 @@ export function deleteOrder(orderId: string): void {
     localStorage.setItem(ORDERS_KEY, JSON.stringify(updated))
     notifyStoreChange()
   }
+  deleteOrderFromCloud(orderId).catch((err) =>
+    console.warn("Error deleting order from Supabase:", err)
+  )
 }
 
 export function resetSampleOrders(): void {
