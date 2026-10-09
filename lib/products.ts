@@ -9,6 +9,9 @@ export interface Product {
   price: number
   originalPrice: number | null
   image: string
+  images?: string[]
+  video?: string
+  imageFit?: "cover" | "contain"
   badge: string | null
   category: Category
   options: string[]

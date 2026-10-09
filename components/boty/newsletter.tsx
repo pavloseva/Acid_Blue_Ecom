@@ -1,17 +1,20 @@
 "use client"
 
 import React from "react"
-
 import { useState } from "react"
-import { ArrowRight, Check } from "lucide-react"
+import { ArrowRight, Check, Mail } from "lucide-react"
+import { sendNewsletterWelcomeEmail } from "@/lib/store"
 
 export function Newsletter() {
   const [email, setEmail] = useState("")
   const [isSubscribed, setIsSubscribed] = useState(false)
+  const [subscribedEmail, setSubscribedEmail] = useState("")
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     if (email) {
+      sendNewsletterWelcomeEmail(email)
+      setSubscribedEmail(email)
       setIsSubscribed(true)
       setEmail("")
     }
@@ -25,13 +28,19 @@ export function Newsletter() {
             Unirte a la comunidad!!
           </h2>
           <p className="text-lg text-primary-foreground/80 mb-10">
-            Suscríbete para ofertas exclusivas, consejos de cuidado de la piel y acceso temprano a productos nuevos.
+            Suscríbete para ofertas exclusivas, novedades y acceso temprano a lanzamientos de Acid Blue.
           </p>
 
           {isSubscribed ? (
-            <div className="inline-flex items-center gap-3 bg-primary-foreground/10 backdrop-blur-sm rounded-full px-8 py-4">
-              <Check className="w-5 h-5 text-primary-foreground" />
-              <span className="text-primary-foreground">¡Gracias por suscribirte!</span>
+            <div className="flex flex-col items-center gap-3 bg-primary-foreground/10 backdrop-blur-sm rounded-3xl p-6 max-w-md mx-auto">
+              <div className="flex items-center gap-3">
+                <Check className="w-5 h-5 text-primary-foreground" />
+                <span className="text-primary-foreground font-semibold">¡Gracias por suscribirte!</span>
+              </div>
+              <p className="text-xs text-primary-foreground/80 flex items-center gap-1.5">
+                <Mail className="w-4 h-4" />
+                Te enviamos el correo <strong>"Bienvenido al newsletter de Acid Blue"</strong> con tu cupón del 10% OFF a <u>{subscribedEmail}</u>
+              </p>
             </div>
           ) : (
             <form onSubmit={handleSubmit} className="flex flex-col sm:flex-row gap-4 max-w-md mx-auto">

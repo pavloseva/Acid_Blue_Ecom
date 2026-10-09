@@ -34,6 +34,15 @@ import {
   ImagePlus,
   Loader2,
   ImageIcon,
+  Edit,
+  Video,
+  Play,
+  Film,
+  Crop,
+  Layers,
+  Inbox,
+  Send,
+  X,
 } from "lucide-react"
 import {
   getOrders,
@@ -43,13 +52,18 @@ import {
   getAllProducts,
   getCustomProducts,
   addCustomProduct,
-  deleteCustomProduct,
+  updateProduct,
+  deleteProduct,
+  getEmails,
+  sendNewsletterWelcomeEmail,
+  sendOrderConfirmationEmail,
   isAdminAuthenticated,
   adminLogout,
   adminLogin,
   DEFAULT_ADMIN,
   type Order,
   type OrderStatus,
+  type EmailRecord,
 } from "@/lib/store"
 import { categoryLabels, formatARS, type Product, type Category } from "@/lib/products"
 
@@ -116,7 +130,7 @@ export default function AdminDashboardPage() {
   const [loginError, setLoginError] = useState("")
 
   // Dashboard navigation tab
-  const [activeTab, setActiveTab] = useState<"orders" | "products">("orders")
+  const [activeTab, setActiveTab] = useState<"orders" | "products" | "emails">("orders")
 
   // Orders State
   const [orders, setOrders] = useState<Order[]>([])
@@ -127,20 +141,28 @@ export default function AdminDashboardPage() {
 
   // Products State
   const [productsList, setProductsList] = useState<Product[]>([])
-  const [customProductsCount, setCustomProductsCount] = useState(0)
   const [productSearch, setProductSearch] = useState("")
   const [isAddProductOpen, setIsAddProductOpen] = useState(false)
+  const [editingProductId, setEditingProductId] = useState<string | null>(null)
 
-  // Add Product Form State
+  // Emails State
+  const [emailsList, setEmailsList] = useState<EmailRecord[]>([])
+  const [selectedEmail, setSelectedEmail] = useState<EmailRecord | null>(null)
+
+  // Product Form State (Add / Edit)
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const videoInputRef = useRef<HTMLInputElement>(null)
   const [isUploadingImage, setIsUploadingImage] = useState(false)
+  const [isUploadingVideo, setIsUploadingVideo] = useState(false)
   const [uploadError, setUploadError] = useState("")
 
   const [newProductName, setNewProductName] = useState("")
   const [newProductCategory, setNewProductCategory] = useState<Category>("almohadon")
   const [newProductPrice, setNewProductPrice] = useState("")
   const [newProductOriginalPrice, setNewProductOriginalPrice] = useState("")
-  const [newProductImage, setNewProductImage] = useState(PRESET_IMAGES[0].path)
+  const [newProductImages, setNewProductImages] = useState<string[]>([])
+  const [newProductVideo, setNewProductVideo] = useState("")
+  const [newProductImageFit, setNewProductImageFit] = useState<"contain" | "cover">("contain")
   const [newProductTagline, setNewProductTagline] = useState("")
   const [newProductDescription, setNewProductDescription] = useState("")
   const [newProductOptions, setNewProductOptions] = useState("40x40, 50x50")
@@ -150,7 +172,7 @@ export default function AdminDashboardPage() {
   const syncStore = () => {
     setOrders(getOrders())
     setProductsList(getAllProducts())
-    setCustomProductsCount(getCustomProducts().length)
+    setEmailsList(getEmails())
   }
 
   useEffect(() => {
@@ -221,58 +243,132 @@ Total: ${formatARS(order.total)}`
     setTimeout(() => setCopiedOrderId(null), 2500)
   }
 
-  // Handle Image File Upload (via API route + fallback FileReader Base64)
-  const handleImageFileUpload = async (file: File) => {
-    if (!file) return
-    if (!file.type.startsWith("image/")) {
-      setUploadError("Por favor seleccioná un archivo de imagen válido (JPG, PNG, WEBP, etc.)")
-      return
-    }
+  // Handle Image File Upload (supports single or multiple photos!)
+  const handleImageFileUpload = async (files: FileList | File[]) => {
+    if (!files || files.length === 0) return
     setUploadError("")
     setIsUploadingImage(true)
 
-    // Try server API upload
+    const uploadedUrls: string[] = []
+
+    for (let i = 0; i < files.length; i++) {
+      const file = files[i]
+      if (!file.type.startsWith("image/")) continue
+
+      let fileUrl = ""
+      // Try server upload API
+      try {
+        const formData = new FormData()
+        formData.append("file", file)
+        const res = await fetch("/api/upload", { method: "POST", body: formData })
+        if (res.ok) {
+          const data = await res.json()
+          if (data.url) fileUrl = data.url
+        }
+      } catch (err) {
+        console.warn("Fallo /api/upload, usando fallback Base64:", err)
+      }
+
+      // Fallback FileReader
+      if (!fileUrl) {
+        try {
+          const base64 = await new Promise<string>((resolve, reject) => {
+            const reader = new FileReader()
+            reader.onload = () => resolve(reader.result as string)
+            reader.onerror = reject
+            reader.readAsDataURL(file)
+          })
+          fileUrl = base64
+        } catch {
+          continue
+        }
+      }
+
+      if (fileUrl) {
+        uploadedUrls.push(fileUrl)
+      }
+    }
+
+    if (uploadedUrls.length > 0) {
+      setNewProductImages((prev) => [...prev, ...uploadedUrls])
+    } else {
+      setUploadError("No se pudieron cargar las imágenes seleccionadas.")
+    }
+    setIsUploadingImage(false)
+  }
+
+  // Handle Video Upload
+  const handleVideoFileUpload = async (file: File) => {
+    if (!file) return
+    setIsUploadingVideo(true)
+    setUploadError("")
+
     try {
       const formData = new FormData()
       formData.append("file", file)
-      const res = await fetch("/api/upload", {
-        method: "POST",
-        body: formData,
-      })
+      const res = await fetch("/api/upload", { method: "POST", body: formData })
       if (res.ok) {
         const data = await res.json()
         if (data.url) {
-          setNewProductImage(data.url)
-          setIsUploadingImage(false)
+          setNewProductVideo(data.url)
+          setIsUploadingVideo(false)
           return
         }
       }
     } catch (err) {
-      console.warn("Fallo en /api/upload, usando fallback local Base64:", err)
+      console.warn("Error subiendo video:", err)
     }
 
-    // Fallback to Base64 FileReader
+    // Fallback base64
     try {
       const reader = new FileReader()
-      reader.onload = (e) => {
-        const result = e.target?.result as string
-        if (result) {
-          setNewProductImage(result)
-        }
-        setIsUploadingImage(false)
-      }
-      reader.onerror = () => {
-        setUploadError("Error al leer la imagen seleccionada.")
-        setIsUploadingImage(false)
+      reader.onload = () => {
+        setNewProductVideo(reader.result as string)
+        setIsUploadingVideo(false)
       }
       reader.readAsDataURL(file)
     } catch {
-      setUploadError("No se pudo procesar la imagen.")
-      setIsUploadingImage(false)
+      setUploadError("Error al procesar el video.")
+      setIsUploadingVideo(false)
     }
   }
 
-  const handleAddProductSubmit = (e: React.FormEvent) => {
+  const handleOpenNewProduct = () => {
+    setEditingProductId(null)
+    setNewProductName("")
+    setNewProductCategory("almohadon")
+    setNewProductPrice("")
+    setNewProductOriginalPrice("")
+    setNewProductTagline("")
+    setNewProductDescription("")
+    setNewProductImages([PRESET_IMAGES[0].path])
+    setNewProductVideo("")
+    setNewProductImageFit("contain")
+    setNewProductOptions("40x40, 50x50")
+    setNewProductBadge("Nuevo")
+    setUploadError("")
+    setIsAddProductOpen(true)
+  }
+
+  const handleStartEditProduct = (product: Product) => {
+    setEditingProductId(product.id)
+    setNewProductName(product.name)
+    setNewProductCategory(product.category)
+    setNewProductPrice(product.price.toString())
+    setNewProductOriginalPrice(product.originalPrice ? product.originalPrice.toString() : "")
+    setNewProductTagline(product.tagline || "")
+    setNewProductDescription(product.longDescription || product.description || "")
+    const imgs = product.images && product.images.length > 0 ? product.images : [product.image]
+    setNewProductImages(imgs)
+    setNewProductVideo(product.video || "")
+    setNewProductImageFit(product.imageFit || "contain")
+    setNewProductOptions(product.options ? product.options.join(", ") : "40x40, 50x50")
+    setNewProductBadge(product.badge || "")
+    setUploadError("")
+    setIsAddProductOpen(true)
+  }
+
+  const handleAddOrEditProductSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     if (!newProductName || !newProductPrice) return
 
@@ -286,14 +382,19 @@ Total: ${formatARS(order.total)}`
       .map((o) => o.trim())
       .filter(Boolean)
 
-    addCustomProduct({
+    const primaryImg = newProductImages[0] || PRESET_IMAGES[0].path
+
+    const productPayload = {
       name: newProductName,
       category: newProductCategory,
       price: priceNum,
       originalPrice: originalPriceNum,
-      image: newProductImage || "/images/acid/cushion-blue-portrait.png",
-      tagline: newProductTagline || "Nuevo diseño exclusivo",
-      description: newProductDescription || "Diseño exclusivo Acid Blue.",
+      image: primaryImg,
+      images: newProductImages.length > 0 ? newProductImages : [primaryImg],
+      video: newProductVideo || undefined,
+      imageFit: newProductImageFit,
+      tagline: newProductTagline || "Diseño exclusivo Acid Blue",
+      description: newProductDescription || "Diseño exclusivo estampado en Córdoba.",
       longDescription:
         newProductDescription ||
         "Producto estampado con materiales de alta calidad en Córdoba Capital.",
@@ -304,27 +405,22 @@ Total: ${formatARS(order.total)}`
       care: "Lavar a mano o en ciclo suave.",
       material: "Materiales premium seleccionados.",
       delivery: "Envíos a todo el país en 24/48 hs hábiles.",
-    })
+    }
 
-    // Reset form
-    setNewProductName("")
-    setNewProductPrice("")
-    setNewProductOriginalPrice("")
-    setNewProductTagline("")
-    setNewProductDescription("")
-    setNewProductImage(PRESET_IMAGES[0].path)
+    if (editingProductId) {
+      updateProduct(editingProductId, productPayload)
+    } else {
+      addCustomProduct(productPayload)
+    }
+
     setIsAddProductOpen(false)
     syncStore()
   }
 
   const handleDeleteProduct = (productId: string, productName: string) => {
-    if (window.confirm(`¿Eliminar el producto "${productName}" del catálogo?`)) {
-      const removed = deleteCustomProduct(productId)
-      if (removed) {
-        syncStore()
-      } else {
-        alert("Los productos base del catálogo inicial no pueden eliminarse, solo los productos agregados por el administrador.")
-      }
+    if (window.confirm(`¿Seguro que querés eliminar el producto "${productName}" del catálogo?`)) {
+      deleteProduct(productId)
+      syncStore()
     }
   }
 
@@ -496,6 +592,18 @@ Total: ${formatARS(order.total)}`
                 <ShoppingBag className="w-3.5 h-3.5" />
                 Productos ({productsList.length})
               </button>
+              <button
+                type="button"
+                onClick={() => setActiveTab("emails")}
+                className={`px-4 py-1.5 rounded-lg text-xs font-medium boty-transition flex items-center gap-2 ${
+                  activeTab === "emails"
+                    ? "bg-primary text-primary-foreground shadow-sm"
+                    : "text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                <Inbox className="w-3.5 h-3.5" />
+                Emails ({emailsList.length})
+              </button>
             </div>
           </div>
 
@@ -541,6 +649,15 @@ Total: ${formatARS(order.total)}`
             }`}
           >
             Productos ({productsList.length})
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveTab("emails")}
+            className={`flex-1 py-2 rounded-lg text-xs font-medium text-center ${
+              activeTab === "emails" ? "bg-primary text-primary-foreground" : "bg-background text-muted-foreground"
+            }`}
+          >
+            Emails ({emailsList.length})
           </button>
         </div>
       </header>
@@ -896,13 +1013,13 @@ Total: ${formatARS(order.total)}`
                   Catálogo de Productos
                 </h2>
                 <p className="text-sm text-muted-foreground">
-                  {productsList.length} productos en total ({customProductsCount} creados desde este panel)
+                  {productsList.length} productos en total. Podés editarlos, eliminarlos o agregar nuevos con múltiples fotos y videos.
                 </p>
               </div>
 
               <button
                 type="button"
-                onClick={() => setIsAddProductOpen(true)}
+                onClick={handleOpenNewProduct}
                 className="bg-primary text-primary-foreground font-semibold px-5 py-2.5 rounded-xl hover:bg-primary/90 boty-transition flex items-center justify-center gap-2 text-sm boty-shadow"
               >
                 <Plus className="w-4 h-4" />
@@ -928,6 +1045,7 @@ Total: ${formatARS(order.total)}`
                 const isCustom = !product.id.startsWith("almohadon-") &&
                   !product.id.startsWith("poster-") &&
                   !product.id.startsWith("taza-")
+                const photosCount = (product.images && product.images.length > 0) ? product.images.length : 1
 
                 return (
                   <div
@@ -935,27 +1053,45 @@ Total: ${formatARS(order.total)}`
                     className="bg-card border border-border hover:border-primary/40 rounded-2xl overflow-hidden boty-shadow boty-transition flex flex-col group"
                   >
                     {/* Image Thumbnail */}
-                    <div className="relative aspect-square bg-muted overflow-hidden">
+                    <div className="relative aspect-square bg-muted overflow-hidden flex items-center justify-center">
                       <Image
                         src={product.image || "/placeholder.svg"}
                         alt={product.name}
                         fill
                         unoptimized
-                        className="object-cover group-hover:scale-105 boty-transition"
+                        className={product.imageFit === "contain" ? "object-contain p-2" : "object-cover group-hover:scale-105 boty-transition"}
                       />
                       {product.badge && (
-                        <span className="absolute top-3 left-3 bg-primary text-primary-foreground text-[10px] uppercase font-bold tracking-wider px-2 py-1 rounded-full">
+                        <span className="absolute top-3 left-3 bg-primary text-primary-foreground text-[10px] uppercase font-bold tracking-wider px-2 py-1 rounded-full z-10">
                           {product.badge}
                         </span>
                       )}
-                      <span className="absolute top-3 right-3 text-[10px] px-2 py-0.5 rounded-full bg-background/80 backdrop-blur-sm border border-border font-mono text-muted-foreground">
-                        {categoryLabels[product.category] || product.category}
-                      </span>
+                      <div className="absolute top-3 right-3 flex items-center gap-1.5 z-10">
+                        {product.video && (
+                          <span className="p-1 rounded-full bg-black/70 text-primary border border-primary/30" title="Tiene video">
+                            <Film className="w-3 h-3" />
+                          </span>
+                        )}
+                        {photosCount > 1 && (
+                          <span className="text-[10px] px-2 py-0.5 rounded-full bg-black/70 backdrop-blur-sm border border-border font-mono text-primary flex items-center gap-1">
+                            <Layers className="w-2.5 h-2.5" />
+                            {photosCount}
+                          </span>
+                        )}
+                      </div>
                     </div>
 
                     {/* Content */}
                     <div className="p-4 flex-1 flex flex-col justify-between">
                       <div>
+                        <div className="flex items-center justify-between mb-1">
+                          <span className="text-[10px] px-2 py-0.5 rounded-full bg-background border border-border font-mono text-muted-foreground">
+                            {categoryLabels[product.category] || product.category}
+                          </span>
+                          <span className="text-[10px] text-muted-foreground font-mono">
+                            {product.imageFit === "contain" ? "100% Completa" : "Recortada 1:1"}
+                          </span>
+                        </div>
                         <h3 className="font-serif text-base font-semibold text-foreground line-clamp-1 mb-1">
                           {product.name}
                         </h3>
@@ -976,7 +1112,17 @@ Total: ${formatARS(order.total)}`
                           )}
                         </div>
 
+                        {/* Action buttons: Edit, View, Delete */}
                         <div className="flex items-center gap-1.5">
+                          <button
+                            type="button"
+                            onClick={() => handleStartEditProduct(product)}
+                            className="p-2 rounded-lg border border-border hover:bg-primary/20 text-muted-foreground hover:text-primary boty-transition"
+                            title="Editar producto"
+                          >
+                            <Edit className="w-3.5 h-3.5" />
+                          </button>
+
                           <Link
                             href={`/product/${product.id}`}
                             target="_blank"
@@ -986,16 +1132,14 @@ Total: ${formatARS(order.total)}`
                             <Eye className="w-3.5 h-3.5" />
                           </Link>
 
-                          {isCustom && (
-                            <button
-                              type="button"
-                              onClick={() => handleDeleteProduct(product.id, product.name)}
-                              className="p-2 rounded-lg border border-border hover:bg-destructive/10 text-muted-foreground hover:text-destructive boty-transition"
-                              title="Eliminar producto creado"
-                            >
-                              <Trash2 className="w-3.5 h-3.5" />
-                            </button>
-                          )}
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteProduct(product.id, product.name)}
+                            className="p-2 rounded-lg border border-border hover:bg-destructive/10 text-muted-foreground hover:text-destructive boty-transition"
+                            title="Eliminar producto"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
                         </div>
                       </div>
                     </div>
@@ -1005,21 +1149,132 @@ Total: ${formatARS(order.total)}`
             </div>
           </section>
         )}
+
+        {/* ------------------------------------------------------------- */}
+        {/* TAB 3: EMAILS ENVIADOS */}
+        {/* ------------------------------------------------------------- */}
+        {activeTab === "emails" && (
+          <section className="space-y-6">
+            <div className="bg-card p-5 rounded-2xl border border-border boty-shadow">
+              <h2 className="font-serif text-2xl font-bold text-foreground">
+                Bandeja de Correos Enviados ({emailsList.length})
+              </h2>
+              <p className="text-sm text-muted-foreground">
+                Registro automático de correos enviados al suscribirse al newsletter o al registrar un pedido.
+              </p>
+            </div>
+
+            {emailsList.length === 0 ? (
+              <div className="bg-card border border-border rounded-3xl p-12 text-center boty-shadow">
+                <Inbox className="w-12 h-12 text-muted-foreground/40 mx-auto mb-4" />
+                <h3 className="font-serif text-lg text-foreground font-semibold mb-1">
+                  Aún no hay correos registrados
+                </h3>
+                <p className="text-sm text-muted-foreground max-w-md mx-auto mb-6">
+                  Cuando un cliente se suscriba al newsletter o complete una compra en el carrito, los correos quedarán registrados aquí automáticamente.
+                </p>
+                <button
+                  type="button"
+                  onClick={() => {
+                    sendNewsletterWelcomeEmail("demo@acidblue.com")
+                    syncStore()
+                  }}
+                  className="bg-primary text-primary-foreground px-5 py-2.5 rounded-xl text-sm font-medium hover:bg-primary/90 boty-transition"
+                >
+                  Enviar Email de Prueba
+                </button>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {emailsList.map((em) => (
+                  <div
+                    key={em.id}
+                    onClick={() => setSelectedEmail(em)}
+                    className="bg-card border border-border hover:border-primary/50 rounded-2xl p-5 boty-shadow boty-transition cursor-pointer"
+                  >
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-xs px-2.5 py-0.5 rounded-full font-mono bg-primary/10 text-primary border border-primary/20">
+                        {em.type === "newsletter" ? "Newsletter" : "Pedido"}
+                      </span>
+                      <span className="text-xs text-muted-foreground">
+                        {new Date(em.sentAt).toLocaleString("es-AR")}
+                      </span>
+                    </div>
+                    <h4 className="font-serif text-base font-bold text-foreground mb-1">
+                      {em.subject}
+                    </h4>
+                    <p className="text-xs text-primary mb-2 flex items-center gap-1.5">
+                      <Mail className="w-3.5 h-3.5" />
+                      Para: {em.to}
+                    </p>
+                    <p className="text-xs text-muted-foreground line-clamp-3 bg-background/50 p-3 rounded-xl border border-border/60 font-mono">
+                      {em.body}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            )}
+          </section>
+        )}
       </main>
 
       {/* ------------------------------------------------------------- */}
-      {/* MODAL: AGREGAR PRODUCTO */}
+      {/* MODAL: EMAIL DETAIL VIEWER */}
+      {/* ------------------------------------------------------------- */}
+      {selectedEmail && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-background/80 backdrop-blur-md">
+          <div className="bg-card border border-border rounded-3xl p-6 lg:p-8 max-w-xl w-full boty-shadow relative animate-scale-fade-in max-h-[85vh] overflow-y-auto">
+            <div className="flex items-center justify-between pb-4 mb-4 border-b border-border">
+              <div>
+                <span className="text-xs font-mono text-primary px-2.5 py-0.5 rounded-full bg-primary/10 border border-primary/20">
+                  {selectedEmail.type.toUpperCase()}
+                </span>
+                <h3 className="font-serif text-xl font-bold text-foreground mt-2">
+                  {selectedEmail.subject}
+                </h3>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  Para: <strong>{selectedEmail.to}</strong> · {new Date(selectedEmail.sentAt).toLocaleString("es-AR")}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setSelectedEmail(null)}
+                className="p-2 text-muted-foreground hover:text-foreground rounded-full hover:bg-muted"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="bg-background rounded-2xl p-4 border border-border whitespace-pre-wrap font-mono text-xs text-foreground/90 leading-relaxed">
+              {selectedEmail.body}
+            </div>
+
+            <div className="mt-6 flex justify-end">
+              <button
+                type="button"
+                onClick={() => setSelectedEmail(null)}
+                className="bg-primary text-primary-foreground px-5 py-2.5 rounded-xl text-sm font-medium hover:bg-primary/90"
+              >
+                Cerrar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ------------------------------------------------------------- */}
+      {/* MODAL: AGREGAR O EDITAR PRODUCTO */}
       {/* ------------------------------------------------------------- */}
       {isAddProductOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-background/80 backdrop-blur-md overflow-y-auto">
-          <div className="bg-card border border-border rounded-3xl p-6 lg:p-8 max-w-xl w-full boty-shadow relative my-8 animate-scale-fade-in max-h-[90vh] overflow-y-auto">
+          <div className="bg-card border border-border rounded-3xl p-6 lg:p-8 max-w-2xl w-full boty-shadow relative my-8 animate-scale-fade-in max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between pb-4 mb-6 border-b border-border">
               <div>
                 <h3 className="font-serif text-2xl font-bold text-foreground">
-                  Nuevo Producto
+                  {editingProductId ? "Editar Producto" : "Nuevo Producto"}
                 </h3>
                 <p className="text-xs text-muted-foreground mt-0.5">
-                  Completá los datos y subí una foto de tu PC para publicar en Acid Blue
+                  Podés agregar múltiples fotos, un video demostrativo y elegir el encuadre.
                 </p>
               </div>
               <button
@@ -1031,7 +1286,7 @@ Total: ${formatARS(order.total)}`
               </button>
             </div>
 
-            <form onSubmit={handleAddProductSubmit} className="space-y-4">
+            <form onSubmit={handleAddOrEditProductSubmit} className="space-y-5">
               {/* Product Name */}
               <div>
                 <label className="block text-xs font-semibold text-foreground uppercase tracking-wider mb-1.5">
@@ -1122,141 +1377,240 @@ Total: ${formatARS(order.total)}`
                 />
               </div>
 
-              {/* IMAGE UPLOAD SECTION */}
-              <div>
-                <label className="block text-xs font-semibold text-foreground uppercase tracking-wider mb-1.5 flex items-center justify-between">
-                  <span>Foto del Producto *</span>
-                  {newProductImage && (
-                    <span className="text-emerald-400 font-mono text-[11px] normal-case flex items-center gap-1">
-                      <Check className="w-3 h-3" /> Imagen seleccionada
-                    </span>
-                  )}
-                </label>
+              {/* MULTIPLE PHOTOS SECTION */}
+              <div className="p-4 rounded-2xl bg-background/60 border border-border/80 space-y-3">
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-semibold text-foreground uppercase tracking-wider flex items-center gap-1.5">
+                    <ImageIcon className="w-4 h-4 text-primary" />
+                    Fotos del Producto ({newProductImages.length})
+                  </label>
+                  <span className="text-[11px] text-muted-foreground">
+                    La primera foto será la principal
+                  </span>
+                </div>
 
-                {/* Hidden File Input */}
+                {/* Hidden File Input for Multiple Images */}
                 <input
                   type="file"
+                  multiple
                   ref={fileInputRef}
                   accept="image/*"
                   onChange={(e) => {
+                    if (e.target.files) handleImageFileUpload(e.target.files)
+                  }}
+                  className="hidden"
+                />
+
+                {/* Thumbnails of Added Images */}
+                {newProductImages.length > 0 && (
+                  <div className="grid grid-cols-3 sm:grid-cols-4 gap-3 pt-1">
+                    {newProductImages.map((imgUrl, idx) => (
+                      <div
+                        key={idx}
+                        className={`relative aspect-square rounded-xl overflow-hidden bg-muted border-2 group ${
+                          idx === 0 ? "border-primary ring-2 ring-primary/30" : "border-border"
+                        }`}
+                      >
+                        <Image
+                          src={imgUrl}
+                          alt={`Foto ${idx + 1}`}
+                          fill
+                          unoptimized
+                          className="object-cover"
+                        />
+                        {idx === 0 && (
+                          <span className="absolute bottom-1 left-1 bg-primary text-primary-foreground text-[9px] font-bold px-1.5 py-0.5 rounded shadow">
+                            Principal
+                          </span>
+                        )}
+                        <div className="absolute inset-0 bg-background/80 opacity-0 group-hover:opacity-100 boty-transition flex flex-col items-center justify-center gap-1.5 p-1">
+                          {idx !== 0 && (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const reordered = [imgUrl, ...newProductImages.filter((_, i) => i !== idx)]
+                                setNewProductImages(reordered)
+                              }}
+                              className="text-[10px] bg-primary text-primary-foreground px-2 py-1 rounded font-medium"
+                            >
+                              Hacer principal
+                            </button>
+                          )}
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setNewProductImages(newProductImages.filter((_, i) => i !== idx))
+                            }}
+                            className="text-[10px] bg-destructive text-white px-2 py-1 rounded font-medium"
+                          >
+                            Eliminar
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* Upload Buttons */}
+                <div className="flex flex-wrap items-center gap-2 pt-2">
+                  <button
+                    type="button"
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={isUploadingImage}
+                    className="text-xs bg-primary/10 hover:bg-primary/20 text-primary border border-primary/30 px-4 py-2 rounded-xl boty-transition flex items-center gap-2 font-medium"
+                  >
+                    {isUploadingImage ? (
+                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    ) : (
+                      <Upload className="w-3.5 h-3.5" />
+                    )}
+                    {newProductImages.length === 0 ? "Subir fotos desde mi PC" : "Agregar más fotos"}
+                  </button>
+
+                  <details className="text-xs text-muted-foreground">
+                    <summary className="cursor-pointer hover:text-foreground">
+                      O elegir de diseños Acid Blue
+                    </summary>
+                    <div className="flex flex-wrap gap-1.5 pt-2">
+                      {PRESET_IMAGES.map((preset) => (
+                        <button
+                          key={preset.path}
+                          type="button"
+                          onClick={() => setNewProductImages((prev) => [...prev, preset.path])}
+                          className="text-[10px] px-2 py-1 rounded bg-background border border-border hover:border-primary/50 text-foreground"
+                        >
+                          + {preset.label}
+                        </button>
+                      ))}
+                    </div>
+                  </details>
+                </div>
+              </div>
+
+              {/* VIDEO SECTION */}
+              <div className="p-4 rounded-2xl bg-background/60 border border-border/80 space-y-3">
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-semibold text-foreground uppercase tracking-wider flex items-center gap-1.5">
+                    <Video className="w-4 h-4 text-primary" />
+                    Video del Producto (Opcional)
+                  </label>
+                  {newProductVideo && (
+                    <button
+                      type="button"
+                      onClick={() => setNewProductVideo("")}
+                      className="text-xs text-destructive hover:underline"
+                    >
+                      Quitar video
+                    </button>
+                  )}
+                </div>
+
+                <input
+                  type="file"
+                  ref={videoInputRef}
+                  accept="video/mp4,video/webm,video/*"
+                  onChange={(e) => {
                     if (e.target.files && e.target.files[0]) {
-                      handleImageFileUpload(e.target.files[0])
+                      handleVideoFileUpload(e.target.files[0])
                     }
                   }}
                   className="hidden"
                 />
 
-                {/* Upload Dropzone or Current Image Preview */}
-                {newProductImage ? (
-                  <div className="bg-background/90 border border-primary/40 rounded-2xl p-4 boty-shadow">
-                    <div className="flex items-center gap-4">
-                      <div className="relative w-20 h-20 rounded-xl overflow-hidden bg-muted border border-border flex-shrink-0">
-                        <Image
-                          src={newProductImage}
-                          alt="Vista previa"
-                          fill
-                          unoptimized
-                          className="object-cover"
-                        />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <span className="text-xs font-medium text-foreground block truncate mb-1">
-                          {newProductImage.startsWith("data:")
-                            ? "Imagen cargada desde tu PC"
-                            : newProductImage.split("/").pop()}
-                        </span>
-                        <span className="text-[11px] text-muted-foreground block mb-2">
-                          Se mostrará en la tienda y en la ficha del producto
-                        </span>
-                        <div className="flex items-center gap-2">
-                          <button
-                            type="button"
-                            onClick={() => fileInputRef.current?.click()}
-                            className="text-xs bg-primary/10 hover:bg-primary/20 text-primary border border-primary/30 px-3 py-1.5 rounded-lg boty-transition flex items-center gap-1.5 font-medium"
-                          >
-                            <Upload className="w-3.5 h-3.5" />
-                            Cambiar foto de mi PC
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => setNewProductImage("")}
-                            className="text-xs text-muted-foreground hover:text-destructive px-2 py-1.5 rounded-lg boty-transition"
-                          >
-                            Quitar
-                          </button>
-                        </div>
-                      </div>
-                    </div>
+                {newProductVideo ? (
+                  <div className="flex items-center gap-3 bg-background p-3 rounded-xl border border-primary/40">
+                    <Film className="w-5 h-5 text-primary flex-shrink-0" />
+                    <span className="text-xs text-foreground truncate flex-1 font-mono">
+                      {newProductVideo.slice(0, 50)}...
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => videoInputRef.current?.click()}
+                      className="text-xs bg-muted px-2.5 py-1 rounded border border-border text-foreground hover:text-primary"
+                    >
+                      Cambiar
+                    </button>
                   </div>
                 ) : (
-                  <div
-                    onClick={() => fileInputRef.current?.click()}
-                    onDragOver={(e) => e.preventDefault()}
-                    onDrop={(e) => {
-                      e.preventDefault()
-                      if (e.dataTransfer.files && e.dataTransfer.files[0]) {
-                        handleImageFileUpload(e.dataTransfer.files[0])
-                      }
-                    }}
-                    className="border-2 border-dashed border-border hover:border-primary/60 bg-background/50 hover:bg-background rounded-2xl p-6 text-center cursor-pointer boty-transition group"
-                  >
-                    {isUploadingImage ? (
-                      <div className="flex flex-col items-center justify-center py-2">
-                        <Loader2 className="w-8 h-8 text-primary animate-spin mb-2" />
-                        <span className="text-sm font-medium text-foreground">Subiendo imagen...</span>
-                      </div>
-                    ) : (
-                      <div className="flex flex-col items-center justify-center">
-                        <div className="w-12 h-12 rounded-2xl bg-primary/10 text-primary flex items-center justify-center mb-3 group-hover:scale-110 boty-transition">
-                          <Upload className="w-6 h-6" />
-                        </div>
-                        <p className="text-sm font-medium text-foreground mb-1">
-                          Hacé clic acá para seleccionar una foto de tu PC
-                        </p>
-                        <p className="text-xs text-muted-foreground">
-                          o arrastrá la imagen acá (JPG, PNG, WEBP)
-                        </p>
-                      </div>
-                    )}
+                  <div className="flex flex-col sm:flex-row gap-2">
+                    <button
+                      type="button"
+                      onClick={() => videoInputRef.current?.click()}
+                      disabled={isUploadingVideo}
+                      className="text-xs bg-muted hover:bg-muted/80 text-foreground border border-border px-4 py-2.5 rounded-xl boty-transition flex items-center justify-center gap-2"
+                    >
+                      {isUploadingVideo ? (
+                        <Loader2 className="w-3.5 h-3.5 animate-spin text-primary" />
+                      ) : (
+                        <Upload className="w-3.5 h-3.5" />
+                      )}
+                      Subir archivo de video (MP4)
+                    </button>
+                    <input
+                      type="text"
+                      value={newProductVideo}
+                      onChange={(e) => setNewProductVideo(e.target.value)}
+                      placeholder="o pegar link de YouTube / Vimeo / MP4"
+                      className="flex-1 bg-background border border-border rounded-xl px-3 py-2 text-xs text-foreground focus:outline-none focus:border-primary"
+                    />
                   </div>
                 )}
+              </div>
 
-                {uploadError && (
-                  <p className="text-xs text-destructive mt-1.5">{uploadError}</p>
-                )}
-
-                {/* Secondary options: URL or Acid Blue presets */}
-                <div className="mt-3 pt-3 border-t border-border/40">
-                  <details className="text-xs group">
-                    <summary className="text-muted-foreground hover:text-primary cursor-pointer select-none">
-                      ¿Preferís ingresar una URL manual o usar diseños del catálogo Acid Blue?
-                    </summary>
-                    <div className="pt-3 space-y-2">
-                      <input
-                        type="text"
-                        value={newProductImage}
-                        onChange={(e) => setNewProductImage(e.target.value)}
-                        placeholder="https://... o /images/acid/..."
-                        className="w-full bg-background border border-border rounded-xl px-3 py-2 text-xs text-foreground focus:outline-none focus:border-primary"
-                      />
-                      <div className="flex flex-wrap gap-1.5 pt-1">
-                        {PRESET_IMAGES.map((preset) => (
-                          <button
-                            key={preset.path}
-                            type="button"
-                            onClick={() => setNewProductImage(preset.path)}
-                            className={`text-[11px] px-2.5 py-1 rounded-lg border boty-transition ${
-                              newProductImage === preset.path
-                                ? "bg-primary/20 text-primary border-primary"
-                                : "bg-background text-muted-foreground border-border hover:text-foreground"
-                            }`}
-                          >
-                            {preset.label}
-                          </button>
-                        ))}
-                      </div>
+              {/* IMAGE FIT / FRAMING CONTROL */}
+              <div className="p-4 rounded-2xl bg-background/60 border border-border/80">
+                <label className="block text-xs font-semibold text-foreground uppercase tracking-wider mb-2 flex items-center gap-1.5">
+                  <Crop className="w-4 h-4 text-primary" />
+                  Encuadre en la Tienda (Cómo se muestra la foto)
+                </label>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <label
+                    className={`flex items-start gap-3 p-3 rounded-xl border cursor-pointer boty-transition ${
+                      newProductImageFit === "contain"
+                        ? "bg-primary/10 border-primary text-foreground"
+                        : "bg-background border-border text-muted-foreground hover:text-foreground"
+                    }`}
+                  >
+                    <input
+                      type="radio"
+                      name="imageFit"
+                      checked={newProductImageFit === "contain"}
+                      onChange={() => setNewProductImageFit("contain")}
+                      className="mt-1"
+                    />
+                    <div>
+                      <span className="font-semibold text-xs block text-foreground">
+                        Foto completa (Sin recortar)
+                      </span>
+                      <span className="text-[11px] text-muted-foreground">
+                        Recomendado: se ve el 100% de la foto con fondo oscuro limpio.
+                      </span>
                     </div>
-                  </details>
+                  </label>
+
+                  <label
+                    className={`flex items-start gap-3 p-3 rounded-xl border cursor-pointer boty-transition ${
+                      newProductImageFit === "cover"
+                        ? "bg-primary/10 border-primary text-foreground"
+                        : "bg-background border-border text-muted-foreground hover:text-foreground"
+                    }`}
+                  >
+                    <input
+                      type="radio"
+                      name="imageFit"
+                      checked={newProductImageFit === "cover"}
+                      onChange={() => setNewProductImageFit("cover")}
+                      className="mt-1"
+                    />
+                    <div>
+                      <span className="font-semibold text-xs block text-foreground">
+                        Llenar cuadro 1:1 (Recorta)
+                      </span>
+                      <span className="text-[11px] text-muted-foreground">
+                        Llena todo el cuadrado recortando los laterales si no es cuadrada.
+                      </span>
+                    </div>
+                  </label>
                 </div>
               </div>
 
@@ -1288,6 +1642,10 @@ Total: ${formatARS(order.total)}`
                 />
               </div>
 
+              {uploadError && (
+                <p className="text-xs text-destructive">{uploadError}</p>
+              )}
+
               {/* Action Buttons */}
               <div className="pt-4 border-t border-border flex items-center justify-end gap-3">
                 <button
@@ -1301,7 +1659,7 @@ Total: ${formatARS(order.total)}`
                   type="submit"
                   className="bg-primary text-primary-foreground font-semibold px-6 py-2.5 rounded-xl hover:bg-primary/90 text-sm boty-transition boty-shadow"
                 >
-                  Guardar y Publicar
+                  {editingProductId ? "Guardar Cambios" : "Guardar y Publicar"}
                 </button>
               </div>
             </form>

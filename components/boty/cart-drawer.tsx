@@ -297,7 +297,7 @@ export function CartDrawer() {
             )}
             <h3 className="font-serif text-2xl text-foreground mb-2">¡Gracias por tu pedido!</h3>
             <p className="text-muted-foreground mb-6 text-sm">
-              Tu orden quedó registrada con éxito. Ya la estamos preparando y te avisaremos por mail cuando sea despachada.
+              Tu orden quedó registrada con éxito y te enviamos un correo con los detalles de tu compra. Ya la estamos preparando y te avisaremos cuando sea despachada.
             </p>
             <button
               type="button"

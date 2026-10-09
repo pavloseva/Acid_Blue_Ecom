@@ -33,8 +33,21 @@ export interface Order {
   createdAt: string
 }
 
+export interface EmailRecord {
+  id: string
+  type: "newsletter" | "order"
+  to: string
+  subject: string
+  body: string
+  orderId?: string
+  sentAt: string
+}
+
 const ORDERS_KEY = "acid_blue_orders_v1"
 const PRODUCTS_KEY = "acid_blue_custom_products_v1"
+const MODIFIED_PRODUCTS_KEY = "acid_blue_modified_products_v1"
+const DELETED_PRODUCTS_KEY = "acid_blue_deleted_products_v1"
+const EMAILS_KEY = "acid_blue_emails_v1"
 const AUTH_KEY = "acid_blue_admin_auth_v1"
 
 // Initial sample orders so the admin view isn't empty upon first opening
@@ -163,6 +176,9 @@ export function saveOrder(newOrderData: {
     }
   }
 
+  // Automatically trigger customer order email
+  sendOrderConfirmationEmail(newOrder)
+
   return newOrder
 }
 
@@ -192,7 +208,7 @@ export function resetSampleOrders(): void {
 }
 
 // -------------------------------------------------------------
-// PRODUCTS (Base + Custom Admin Products)
+// PRODUCTS (Base + Custom Admin Products + Edits & Deletions)
 // -------------------------------------------------------------
 
 export function getCustomProducts(): Product[] {
@@ -208,9 +224,45 @@ export function getCustomProducts(): Product[] {
   }
 }
 
+function getModifiedProductsMap(): Record<string, Partial<Product>> {
+  if (!isClient()) return {}
+  try {
+    const raw = localStorage.getItem(MODIFIED_PRODUCTS_KEY)
+    return raw ? JSON.parse(raw) : {}
+  } catch {
+    return {}
+  }
+}
+
+function getDeletedProductIds(): string[] {
+  if (!isClient()) return []
+  try {
+    const raw = localStorage.getItem(DELETED_PRODUCTS_KEY)
+    return raw ? JSON.parse(raw) : []
+  } catch {
+    return []
+  }
+}
+
 export function getAllProducts(): Product[] {
   const custom = getCustomProducts()
-  return [...custom, ...baseProducts]
+  const deletedIds = new Set(getDeletedProductIds())
+  const modifiedMap = getModifiedProductsMap()
+
+  // Base products filtered and modified
+  const effectiveBaseProducts = baseProducts
+    .filter((p) => !deletedIds.has(p.id))
+    .map((p) => {
+      if (modifiedMap[p.id]) {
+        return { ...p, ...modifiedMap[p.id] } as Product
+      }
+      return p
+    })
+
+  // Also filter any custom products if deleted
+  const effectiveCustom = custom.filter((p) => !deletedIds.has(p.id))
+
+  return [...effectiveCustom, ...effectiveBaseProducts]
 }
 
 export function getProductById(id: string): Product | undefined {
@@ -227,6 +279,7 @@ export function addCustomProduct(newProduct: Omit<Product, "id"> & { id?: string
   const productToSave: Product = {
     ...newProduct,
     id: generatedId,
+    images: newProduct.images && newProduct.images.length > 0 ? newProduct.images : [newProduct.image],
   }
 
   const updated = [productToSave, ...custom]
@@ -237,17 +290,161 @@ export function addCustomProduct(newProduct: Omit<Product, "id"> & { id?: string
   return productToSave
 }
 
-export function deleteCustomProduct(id: string): boolean {
+export function updateProduct(id: string, updatedFields: Partial<Product>): Product | null {
+  if (!isClient()) return null
+
   const custom = getCustomProducts()
-  const updated = custom.filter((p) => p.id !== id)
-  if (updated.length !== custom.length) {
-    if (isClient()) {
-      localStorage.setItem(PRODUCTS_KEY, JSON.stringify(updated))
-      notifyStoreChange()
+  const customIndex = custom.findIndex((p) => p.id === id)
+
+  if (customIndex >= 0) {
+    // Update in custom products
+    const updatedProduct = { ...custom[customIndex], ...updatedFields }
+    if (updatedFields.image && (!updatedProduct.images || updatedProduct.images.length === 0)) {
+      updatedProduct.images = [updatedFields.image]
     }
+    custom[customIndex] = updatedProduct
+    localStorage.setItem(PRODUCTS_KEY, JSON.stringify(custom))
+    notifyStoreChange()
+    return updatedProduct
+  }
+
+  // Otherwise, it's a base product
+  const baseProduct = baseProducts.find((p) => p.id === id)
+  if (baseProduct) {
+    const modifiedMap = getModifiedProductsMap()
+    modifiedMap[id] = { ...(modifiedMap[id] || {}), ...updatedFields }
+    localStorage.setItem(MODIFIED_PRODUCTS_KEY, JSON.stringify(modifiedMap))
+    notifyStoreChange()
+    return { ...baseProduct, ...modifiedMap[id] } as Product
+  }
+
+  return null
+}
+
+export function deleteProduct(id: string): boolean {
+  if (!isClient()) return false
+
+  // Check if it's a custom product
+  const custom = getCustomProducts()
+  const updatedCustom = custom.filter((p) => p.id !== id)
+  if (updatedCustom.length !== custom.length) {
+    localStorage.setItem(PRODUCTS_KEY, JSON.stringify(updatedCustom))
+    notifyStoreChange()
     return true
   }
+
+  // It's a base product - add to deleted products list
+  const deletedIds = getDeletedProductIds()
+  if (!deletedIds.includes(id)) {
+    deletedIds.push(id)
+    localStorage.setItem(DELETED_PRODUCTS_KEY, JSON.stringify(deletedIds))
+    notifyStoreChange()
+    return true
+  }
+
   return false
+}
+
+// -------------------------------------------------------------
+// EMAILS & NOTIFICATIONS
+// -------------------------------------------------------------
+
+export function getEmails(): EmailRecord[] {
+  if (!isClient()) return []
+  try {
+    const raw = localStorage.getItem(EMAILS_KEY)
+    return raw ? JSON.parse(raw) : []
+  } catch {
+    return []
+  }
+}
+
+export function recordEmail(emailData: Omit<EmailRecord, "id" | "sentAt">): EmailRecord {
+  const emails = getEmails()
+  const newEmail: EmailRecord = {
+    ...emailData,
+    id: `EML-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`,
+    sentAt: new Date().toISOString(),
+  }
+
+  const updated = [newEmail, ...emails]
+  if (isClient()) {
+    try {
+      localStorage.setItem(EMAILS_KEY, JSON.stringify(updated))
+      notifyStoreChange()
+    } catch (err) {
+      console.error("Error saving email record:", err)
+    }
+  }
+
+  // Try optional server route
+  try {
+    fetch("/api/send-email", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(newEmail),
+    }).catch(() => {})
+  } catch {}
+
+  return newEmail
+}
+
+export function sendNewsletterWelcomeEmail(email: string): EmailRecord {
+  return recordEmail({
+    type: "newsletter",
+    to: email,
+    subject: "¡Bienvenido al newsletter de Acid Blue!",
+    body: `¡Hola!
+
+Te damos la bienvenida a la comunidad Acid Blue.
+Nos alegra sumar tu estilo alternativo a nuestro espacio de arte urbano y estampado de autor desde Córdoba Capital.
+
+Como bienvenida, te dejamos un cupón exclusivo del 10% OFF en tu próxima compra:
+Código: ACID10
+
+Explorá nuestra colección de almohadones, posters y tazas en:
+https://acidblue.com/shop
+
+¡Que tengas un día ácido!
+Equipo Acid Blue`,
+  })
+}
+
+export function sendOrderConfirmationEmail(order: Order): EmailRecord {
+  const itemsText = order.items
+    .map((i) => `• ${i.quantity}x ${i.name} (${i.description || ""}) - $${i.price.toLocaleString("es-AR")}`)
+    .join("\n")
+
+  return recordEmail({
+    type: "order",
+    orderId: order.id,
+    to: order.customer.email,
+    subject: `Confirmación de pedido #${order.id} · Acid Blue`,
+    body: `¡Hola ${order.customer.name}!
+
+¡Gracias por tu compra en Acid Blue! Tu pedido #${order.id} ha sido registrado con éxito y ya lo estamos preparando en nuestro taller.
+
+DETALLE DEL PEDIDO:
+------------------------------------------
+${itemsText}
+------------------------------------------
+Subtotal: $${order.subtotal.toLocaleString("es-AR")}
+Envío: ${order.shipping === 0 ? "Gratis" : "$" + order.shipping.toLocaleString("es-AR")}
+Total: $${order.total.toLocaleString("es-AR")}
+
+DATOS DE ENVÍO:
+Destinatario: ${order.customer.name}
+Dirección: ${order.customer.address} ${order.customer.city ? `(${order.customer.city})` : ""}
+Teléfono: ${order.customer.phone || "No especificado"}
+
+TIEMPOS DE ENTREGA:
+Despachamos tu pedido en 24/48 hs hábiles por correo. Te avisaremos cuando esté en camino.
+
+Si tenés alguna consulta, respondé a este correo o escribinos por WhatsApp.
+
+¡Gracias por elegir arte auténtico!
+Equipo Acid Blue`,
+  })
 }
 
 // -------------------------------------------------------------
