@@ -296,8 +296,11 @@ export function CartDrawer() {
               </span>
             )}
             <h3 className="font-serif text-2xl text-foreground mb-2">¡Gracias por tu pedido!</h3>
-            <p className="text-muted-foreground mb-6 text-sm">
+            <p className="text-muted-foreground mb-4 text-sm leading-relaxed">
               Tu orden quedó registrada con éxito y te enviamos un correo con los detalles de tu compra. Ya la estamos preparando y te avisaremos cuando sea despachada.
+            </p>
+            <p className="text-xs text-muted-foreground bg-muted/60 p-3 rounded-2xl border border-border mb-6 text-left">
+              📩 <strong>Aviso:</strong> Enviamos el comprobante desde <strong>holaacidblue@gmail.com</strong>. Si no lo ves en tu bandeja principal, chequeá la pestaña de <em>Promociones</em> o <em>Spam</em>.
             </p>
             <button
               type="button"

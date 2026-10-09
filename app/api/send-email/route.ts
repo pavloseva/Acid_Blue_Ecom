@@ -7,12 +7,14 @@ function sendViaGmailSmtp({
   to,
   subject,
   html,
+  text,
 }: {
   user: string
   pass: string
   to: string
   subject: string
   html: string
+  text?: string
 }): Promise<{ success: boolean; messageId: string }> {
   return new Promise((resolve, reject) => {
     const cleanPass = pass.replace(/\s+/g, "")
@@ -59,15 +61,34 @@ function sendViaGmailSmtp({
           socket.write("DATA\r\n")
         } else if (step === 7 && code === 354) {
           step = 8
+          const boundary = `acid_alt_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`
+          const dateStr = new Date().toUTCString()
+          const messageId = `<acid-${Date.now()}-${Math.random().toString(36).slice(2, 8)}@gmail.com>`
+          const textBody = text || html.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim()
+
           const emailMessage = [
             `From: Acid Blue <${user}>`,
             `To: <${to}>`,
+            `Reply-To: Acid Blue <${user}>`,
+            `Date: ${dateStr}`,
+            `Message-ID: ${messageId}`,
             `Subject: =?UTF-8?B?${Buffer.from(subject).toString("base64")}?=`,
             "MIME-Version: 1.0",
+            `Content-Type: multipart/alternative; boundary="${boundary}"`,
+            "",
+            `--${boundary}`,
+            "Content-Type: text/plain; charset=UTF-8",
+            "Content-Transfer-Encoding: base64",
+            "",
+            Buffer.from(textBody).toString("base64"),
+            "",
+            `--${boundary}`,
             "Content-Type: text/html; charset=UTF-8",
             "Content-Transfer-Encoding: base64",
             "",
             Buffer.from(html).toString("base64"),
+            "",
+            `--${boundary}--`,
             "",
             ".\r\n",
           ].join("\r\n")
@@ -184,6 +205,7 @@ export async function POST(request: Request) {
           to,
           subject,
           html,
+          text: body,
         })
         console.log("[GMAIL SMTP SUCCESS] Para:", to, "MessageId:", smtpRes.messageId)
         return NextResponse.json({
