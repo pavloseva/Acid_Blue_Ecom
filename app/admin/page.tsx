@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useRef } from "react"
+import { useState, useEffect, useRef, useMemo } from "react"
 import Image from "next/image"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
@@ -73,7 +73,7 @@ import {
   type OrderStatus,
   type EmailRecord,
 } from "@/lib/store"
-import { categoryLabels, formatARS, type Product, type Category } from "@/lib/products"
+import { categoryLabels, getCategoryLabel, formatARS, type Product, type Category } from "@/lib/products"
 
 const PRESET_IMAGES = [
   { label: "Almohadón Azul", path: "/images/acid/cushion-blue-portrait.png" },
@@ -174,6 +174,8 @@ export default function AdminDashboardPage() {
 
   const [newProductName, setNewProductName] = useState("")
   const [newProductCategory, setNewProductCategory] = useState<Category>("almohadon")
+  const [isCustomCategory, setIsCustomCategory] = useState(false)
+  const [newProductOptionLabel, setNewProductOptionLabel] = useState("Medida")
   const [newProductPrice, setNewProductPrice] = useState("")
   const [newProductOriginalPrice, setNewProductOriginalPrice] = useState("")
   const [newProductImages, setNewProductImages] = useState<string[]>([])
@@ -183,6 +185,12 @@ export default function AdminDashboardPage() {
   const [newProductDescription, setNewProductDescription] = useState("")
   const [newProductOptions, setNewProductOptions] = useState("40x40, 50x50")
   const [newProductBadge, setNewProductBadge] = useState("Nuevo")
+
+  const availableCategories = useMemo(() => {
+    const base = ["almohadon", "poster", "taza", "bolso", "remera", "accesorio", "cuadro"]
+    const fromProducts = productsList.map((p) => p.category?.toLowerCase()?.trim()).filter(Boolean)
+    return Array.from(new Set([...base, ...fromProducts]))
+  }, [productsList])
 
   const [isSyncing, setIsSyncing] = useState(false)
 
@@ -426,6 +434,8 @@ Total: ${formatARS(order.total)}`
     setEditingProductId(null)
     setNewProductName("")
     setNewProductCategory("almohadon")
+    setIsCustomCategory(false)
+    setNewProductOptionLabel("Medida")
     setNewProductPrice("")
     setNewProductOriginalPrice("")
     setNewProductTagline("")
@@ -442,7 +452,10 @@ Total: ${formatARS(order.total)}`
   const handleStartEditProduct = (product: Product) => {
     setEditingProductId(product.id)
     setNewProductName(product.name)
-    setNewProductCategory(product.category)
+    const cat = (product.category || "").trim().toLowerCase()
+    setNewProductCategory(cat || "almohadon")
+    setIsCustomCategory(!availableCategories.includes(cat))
+    setNewProductOptionLabel(product.optionLabel || (cat === "taza" ? "Capacidad" : "Medida"))
     setNewProductPrice(product.price.toString())
     setNewProductOriginalPrice(product.originalPrice ? product.originalPrice.toString() : "")
     setNewProductTagline(product.tagline || "")
@@ -472,10 +485,13 @@ Total: ${formatARS(order.total)}`
       .filter(Boolean)
 
     const primaryImg = newProductImages[0] || PRESET_IMAGES[0].path
+    const finalCategory = newProductCategory.trim().toLowerCase() || "almohadon"
+    const finalOptionLabel =
+      newProductOptionLabel.trim() || (finalCategory === "taza" ? "Capacidad" : "Medida")
 
     const productPayload = {
       name: newProductName,
-      category: newProductCategory,
+      category: finalCategory,
       price: priceNum,
       originalPrice: originalPriceNum,
       image: primaryImg,
@@ -489,7 +505,7 @@ Total: ${formatARS(order.total)}`
         "Producto estampado con materiales de alta calidad en Córdoba Capital.",
       badge: newProductBadge || null,
       options: optionsArray.length > 0 ? optionsArray : ["Único"],
-      optionLabel: newProductCategory === "taza" ? "Capacidad" : "Medida",
+      optionLabel: finalOptionLabel,
       details: "Estampa de alta durabilidad. Diseñado en Córdoba.",
       care: "Lavar a mano o en ciclo suave.",
       material: "Materiales premium seleccionados.",
@@ -1211,7 +1227,7 @@ Total: ${formatARS(order.total)}`
                       <div>
                         <div className="flex items-center justify-between mb-1">
                           <span className="text-[10px] px-2 py-0.5 rounded-full bg-background border border-border font-mono text-muted-foreground">
-                            {categoryLabels[product.category] || product.category}
+                            {getCategoryLabel(product.category)}
                           </span>
                           <span className="text-[10px] text-muted-foreground font-mono">
                             {product.imageFit === "contain" ? "100% Completa" : "Recortada 1:1"}
@@ -1636,18 +1652,63 @@ Total: ${formatARS(order.total)}`
               {/* Category & Badge */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-xs font-semibold text-foreground uppercase tracking-wider mb-1.5">
-                    Categoría *
-                  </label>
-                  <select
-                    value={newProductCategory}
-                    onChange={(e) => setNewProductCategory(e.target.value as Category)}
-                    className="w-full bg-background border border-border rounded-xl px-4 py-2.5 text-sm text-foreground focus:outline-none focus:border-primary boty-transition"
-                  >
-                    <option value="almohadon">Almohadones</option>
-                    <option value="poster">Posters</option>
-                    <option value="taza">Tazas</option>
-                  </select>
+                  <div className="flex items-center justify-between mb-1.5">
+                    <label className="block text-xs font-semibold text-foreground uppercase tracking-wider">
+                      Categoría *
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const nextState = !isCustomCategory
+                        setIsCustomCategory(nextState)
+                        if (nextState) {
+                          setNewProductCategory("")
+                        } else {
+                          setNewProductCategory(availableCategories[0] || "almohadon")
+                        }
+                      }}
+                      className="text-xs text-primary hover:underline font-mono"
+                    >
+                      {isCustomCategory ? "← Elegir existente" : "+ Crear nueva"}
+                    </button>
+                  </div>
+
+                  {!isCustomCategory ? (
+                    <select
+                      value={newProductCategory}
+                      onChange={(e) => {
+                        if (e.target.value === "__custom__") {
+                          setIsCustomCategory(true)
+                          setNewProductCategory("")
+                        } else {
+                          setNewProductCategory(e.target.value)
+                        }
+                      }}
+                      className="w-full bg-background border border-border rounded-xl px-4 py-2.5 text-sm text-foreground focus:outline-none focus:border-primary boty-transition"
+                    >
+                      {availableCategories.map((cat) => (
+                        <option key={cat} value={cat}>
+                          {getCategoryLabel(cat)}
+                        </option>
+                      ))}
+                      <option value="__custom__">➕ Crear nueva categoría...</option>
+                    </select>
+                  ) : (
+                    <div className="space-y-1">
+                      <input
+                        type="text"
+                        required
+                        value={newProductCategory}
+                        onChange={(e) => setNewProductCategory(e.target.value)}
+                        placeholder="Ej: Remeras, Bolsos, Cuadros..."
+                        className="w-full bg-background border border-primary rounded-xl px-4 py-2.5 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary boty-transition"
+                        autoFocus
+                      />
+                      <p className="text-[11px] text-muted-foreground">
+                        Escribí el nombre y se creará automáticamente en la tienda.
+                      </p>
+                    </div>
+                  )}
                 </div>
 
                 <div>
@@ -1945,18 +2006,32 @@ Total: ${formatARS(order.total)}`
                 </div>
               </div>
 
-              {/* Options / Sizes */}
-              <div>
-                <label className="block text-xs font-semibold text-foreground uppercase tracking-wider mb-1.5">
-                  Opciones / Medidas (separadas por coma)
-                </label>
-                <input
-                  type="text"
-                  value={newProductOptions}
-                  onChange={(e) => setNewProductOptions(e.target.value)}
-                  placeholder="40x40, 50x50  o  S, M, L, XL"
-                  className="w-full bg-background border border-border rounded-xl px-4 py-2.5 text-sm text-foreground focus:outline-none focus:border-primary boty-transition"
-                />
+              {/* Options & Variants */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-semibold text-foreground uppercase tracking-wider mb-1.5">
+                    Tipo de Opción (Etiqueta)
+                  </label>
+                  <input
+                    type="text"
+                    value={newProductOptionLabel}
+                    onChange={(e) => setNewProductOptionLabel(e.target.value)}
+                    placeholder="Ej: Medida, Talle, Capacidad, Color"
+                    className="w-full bg-background border border-border rounded-xl px-4 py-2.5 text-sm text-foreground focus:outline-none focus:border-primary boty-transition"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-foreground uppercase tracking-wider mb-1.5">
+                    Variantes (separadas por coma)
+                  </label>
+                  <input
+                    type="text"
+                    value={newProductOptions}
+                    onChange={(e) => setNewProductOptions(e.target.value)}
+                    placeholder="40x40, 50x50  o  S, M, L, XL"
+                    className="w-full bg-background border border-border rounded-xl px-4 py-2.5 text-sm text-foreground focus:outline-none focus:border-primary boty-transition"
+                  />
+                </div>
               </div>
 
               {/* Description */}

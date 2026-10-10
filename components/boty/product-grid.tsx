@@ -1,22 +1,31 @@
 "use client"
 
-import { useState, useEffect, useRef } from "react"
+import { useState, useEffect, useRef, useMemo } from "react"
 import Image from "next/image"
 import Link from "next/link"
 import { ShoppingBag } from "lucide-react"
 import { useCart } from "./cart-context"
-import { products, categoryLabels, formatARS, type Category, type Product } from "@/lib/products"
+import { products, categoryLabels, getCategoryLabel, formatARS, type Category, type Product } from "@/lib/products"
 import { getAllProducts, syncStoreWithCloud } from "@/lib/store"
 
-const categories: { value: Category; label: string }[] = [
-  { value: "almohadon", label: categoryLabels.almohadon },
-  { value: "poster", label: categoryLabels.poster },
-  { value: "taza", label: categoryLabels.taza },
-]
-
 export function ProductGrid() {
-  const [selectedCategory, setSelectedCategory] = useState<Category>("almohadon")
   const [allProducts, setAllProducts] = useState<Product[]>(products)
+
+  // Dynamically derive unique categories from the active products catalog
+  const categories = useMemo(() => {
+    const unique = Array.from(new Set(allProducts.map((p) => p.category).filter(Boolean)))
+    return unique.length > 0 ? unique : ["almohadon", "poster", "taza"]
+  }, [allProducts])
+
+  const [selectedCategory, setSelectedCategory] = useState<Category>("almohadon")
+
+  // Ensure selectedCategory matches an available category
+  useEffect(() => {
+    if (categories.length > 0 && !categories.includes(selectedCategory)) {
+      setSelectedCategory(categories[0])
+    }
+  }, [categories, selectedCategory])
+
   const [isVisible, setIsVisible] = useState(false)
   const [isTransitioning, setIsTransitioning] = useState(false)
   const [headerVisible, setHeaderVisible] = useState(false)
@@ -93,13 +102,6 @@ export function ProductGrid() {
     }
   }, [])
 
-  const indicatorLeft =
-    selectedCategory === "almohadon"
-      ? "4px"
-      : selectedCategory === "poster"
-      ? "calc(33.333% + 2px)"
-      : "calc(66.666%)"
-
   return (
     <section id="productos" className="py-24 bg-card scroll-mt-20">
       <div className="max-w-7xl mx-auto px-6 lg:px-8">
@@ -125,31 +127,25 @@ export function ProductGrid() {
           </p>
         </div>
 
-        {/* Segmented Control */}
-        <div className="flex justify-center mb-12">
-          <div className="inline-flex bg-background rounded-full p-1 gap-1 relative border border-border">
-            <div
-              className="absolute top-1 bottom-1 acid-gradient-bg rounded-full transition-all duration-300 ease-out"
-              style={{
-                left: indicatorLeft,
-                width: 'calc(33.333% - 4px)',
-              }}
-            />
-            {categories.map((category) => (
+        {/* Categories Filter */}
+        <div className="flex flex-wrap items-center justify-center gap-2 mb-12">
+          {categories.map((cat) => {
+            const isSelected = selectedCategory === cat
+            return (
               <button
-                key={category.value}
+                key={cat}
                 type="button"
-                onClick={() => handleCategoryChange(category.value)}
-                className={`relative z-10 px-6 py-2.5 rounded-full text-sm font-medium transition-all duration-300 ${
-                  selectedCategory === category.value
-                    ? "text-primary-foreground"
-                    : "text-muted-foreground hover:text-foreground"
+                onClick={() => handleCategoryChange(cat)}
+                className={`px-5 py-2.5 rounded-full text-sm font-medium transition-all duration-300 border ${
+                  isSelected
+                    ? "acid-gradient-bg text-primary-foreground border-transparent shadow-md font-semibold scale-105"
+                    : "bg-background text-muted-foreground hover:text-foreground hover:border-primary/40 border-border"
                 }`}
               >
-                {category.label}
+                {getCategoryLabel(cat)}
               </button>
-            ))}
-          </div>
+            )
+          })}
         </div>
 
         {/* Product Grid */}

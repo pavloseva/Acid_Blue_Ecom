@@ -1,28 +1,33 @@
 "use client"
 
-import { useState, useEffect, useRef } from "react"
+import { useState, useEffect, useRef, useMemo } from "react"
 import Image from "next/image"
 import Link from "next/link"
 import { ShoppingBag, SlidersHorizontal, X } from "lucide-react"
 import { Header } from "@/components/boty/header"
 import { Footer } from "@/components/boty/footer"
 import { useCart } from "@/components/boty/cart-context"
-import { products, categoryLabels, formatARS, type Category, type Product } from "@/lib/products"
+import { products, categoryLabels, getCategoryLabel, formatARS, type Category, type Product } from "@/lib/products"
 import { getAllProducts, syncStoreWithCloud } from "@/lib/store"
 
-const filters: { value: "all" | Category; label: string }[] = [
-  { value: "all", label: "Todo" },
-  { value: "almohadon", label: categoryLabels.almohadon },
-  { value: "poster", label: categoryLabels.poster },
-  { value: "taza", label: categoryLabels.taza },
-]
-
 export default function ShopPage() {
-  const [selectedCategory, setSelectedCategory] = useState<"all" | Category>("all")
   const [allProducts, setAllProducts] = useState<Product[]>(products)
+  const [selectedCategory, setSelectedCategory] = useState<"all" | Category>("all")
   const [showFilters, setShowFilters] = useState(false)
   const [isVisible, setIsVisible] = useState(false)
   const gridRef = useRef<HTMLDivElement>(null)
+
+  const filters = useMemo(() => {
+    const dynamicCats = Array.from(new Set(allProducts.map((p) => p.category).filter(Boolean)))
+    const baseCats = dynamicCats.length > 0 ? dynamicCats : ["almohadon", "poster", "taza"]
+    return [
+      { value: "all", label: "Todo" },
+      ...baseCats.map((cat) => ({
+        value: cat,
+        label: getCategoryLabel(cat),
+      })),
+    ]
+  }, [allProducts])
 
   useEffect(() => {
     const syncProducts = () => {
@@ -79,7 +84,7 @@ export default function ShopPage() {
               Toda la tienda
             </h1>
             <p className="text-lg text-muted-foreground max-w-md mx-auto">
-              Almohadones, posters y tazas con arte impreso, listos para enviar a todo el país
+              Artículos de diseño y arte impreso, listos para enviar a todo el país
             </p>
           </div>
 

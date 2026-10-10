@@ -1,4 +1,4 @@
-export type Category = "almohadon" | "poster" | "taza"
+export type Category = string
 
 export interface Product {
   id: string
@@ -211,10 +211,23 @@ export const products: Product[] = [
   },
 ]
 
-export const categoryLabels: Record<Category, string> = {
+export const categoryLabels: Record<string, string> = {
   almohadon: "Almohadones",
   poster: "Posters",
   taza: "Tazas",
+  bolso: "Bolsos",
+  remera: "Remeras",
+  accesorio: "Accesorios",
+  cuadro: "Cuadros",
+}
+
+export function getCategoryLabel(category: string): string {
+  if (!category) return ""
+  const normalized = category.toLowerCase().trim()
+  if (categoryLabels[normalized]) {
+    return categoryLabels[normalized]
+  }
+  return category.charAt(0).toUpperCase() + category.slice(1)
 }
 
 export function formatARS(value: number | null | undefined): string {
