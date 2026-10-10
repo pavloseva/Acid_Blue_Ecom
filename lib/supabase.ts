@@ -175,6 +175,8 @@ export async function saveStoreSettingsToCloud(settings: {
   minPurchaseAmount: number
   customLeadTimeDays: string
   bannerNotice?: string
+  categories?: any[]
+  [key: string]: any
 }): Promise<boolean> {
   try {
     const payload = {

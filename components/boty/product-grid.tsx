@@ -5,8 +5,8 @@ import Image from "next/image"
 import Link from "next/link"
 import { ShoppingBag } from "lucide-react"
 import { useCart } from "./cart-context"
-import { products, categoryLabels, getCategoryLabel, formatARS, type Category, type Product } from "@/lib/products"
-import { getAllProducts, syncStoreWithCloud } from "@/lib/store"
+import { products, categoryLabels, formatARS, type Category, type Product } from "@/lib/products"
+import { getAllProducts, syncStoreWithCloud, getCategoryLabelFromStore } from "@/lib/store"
 
 export function ProductGrid() {
   const [allProducts, setAllProducts] = useState<Product[]>(products)
@@ -142,7 +142,7 @@ export function ProductGrid() {
                     : "bg-background text-muted-foreground hover:text-foreground hover:border-primary/40 border-border"
                 }`}
               >
-                {getCategoryLabel(cat)}
+                {getCategoryLabelFromStore(cat)}
               </button>
             )
           })}

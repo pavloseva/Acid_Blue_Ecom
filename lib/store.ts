@@ -1,6 +1,6 @@
 "use client"
 
-import { products as baseProducts, type Product, type Category } from "./products"
+import { products as baseProducts, type Product, type Category, getCategoryLabel } from "./products"
 import {
   fetchProductsFromCloud,
   saveProductToCloud,
@@ -17,16 +17,32 @@ import {
 
 export { uploadMediaToCloud }
 
+export interface CategoryItem {
+  id: string
+  label: string
+}
+
+export const DEFAULT_CATEGORIES: CategoryItem[] = [
+  { id: "almohadon", label: "Almohadones" },
+  { id: "poster", label: "Posters" },
+  { id: "taza", label: "Tazas" },
+  { id: "bolso", label: "Bolsos" },
+  { id: "remera", label: "Remeras" },
+  { id: "accesorio", label: "Accesorios" },
+]
+
 export interface StoreSettings {
   minPurchaseAmount: number
   customLeadTimeDays: string
   bannerNotice?: string
+  categories?: CategoryItem[]
 }
 
 export const DEFAULT_SETTINGS: StoreSettings = {
   minPurchaseAmount: 15000,
   customLeadTimeDays: "4 a 5 días hábiles desde el pago",
   bannerNotice: "Compra mínima: $15.000 · Envíos a todo el país",
+  categories: DEFAULT_CATEGORIES,
 }
 
 export type OrderStatus = "pendiente" | "en_preparacion" | "enviado" | "entregado" | "cancelado"
@@ -271,7 +287,14 @@ export function getStoreSettings(): StoreSettings {
     return {
       ...DEFAULT_SETTINGS,
       ...parsed,
-      minPurchaseAmount: typeof parsed.minPurchaseAmount === "number" ? parsed.minPurchaseAmount : DEFAULT_SETTINGS.minPurchaseAmount,
+      minPurchaseAmount:
+        typeof parsed.minPurchaseAmount === "number"
+          ? parsed.minPurchaseAmount
+          : DEFAULT_SETTINGS.minPurchaseAmount,
+      categories:
+        Array.isArray(parsed.categories) && parsed.categories.length > 0
+          ? parsed.categories
+          : DEFAULT_CATEGORIES,
     }
   } catch (err) {
     console.error("Error reading store settings from localStorage:", err)
@@ -507,6 +530,135 @@ export function deleteProduct(id: string): boolean {
   }
 
   return false
+}
+
+// -------------------------------------------------------------
+// CATEGORIES MANAGEMENT
+// -------------------------------------------------------------
+
+export function getStoreCategories(): CategoryItem[] {
+  const settings = getStoreSettings()
+  const rawList: CategoryItem[] =
+    Array.isArray(settings.categories) && settings.categories.length > 0
+      ? settings.categories
+      : DEFAULT_CATEGORIES
+
+  const seen = new Set<string>()
+  const result: CategoryItem[] = []
+
+  for (const item of rawList) {
+    if (!item || !item.id) continue
+    const normId = item.id.toLowerCase().trim()
+    if (!seen.has(normId)) {
+      seen.add(normId)
+      result.push({
+        id: normId,
+        label: item.label ? item.label.trim() : getCategoryLabel(normId),
+      })
+    }
+  }
+
+  // Also include any categories that exist on active products in the store
+  const allProds = getAllProducts()
+  for (const p of allProds) {
+    if (p.category) {
+      const normId = p.category.toLowerCase().trim()
+      if (!seen.has(normId)) {
+        seen.add(normId)
+        result.push({
+          id: normId,
+          label: getCategoryLabel(normId),
+        })
+      }
+    }
+  }
+
+  return result
+}
+
+export function getCategoryLabelFromStore(categoryId: string): string {
+  if (!categoryId) return ""
+  const norm = categoryId.toLowerCase().trim()
+  const categories = getStoreCategories()
+  const found = categories.find((c) => c.id === norm)
+  if (found) return found.label
+  return getCategoryLabel(categoryId)
+}
+
+export async function addStoreCategory(category: CategoryItem): Promise<CategoryItem[]> {
+  const current = getStoreCategories()
+  const normId = category.id
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9_-]/g, "-")
+    .replace(/-+/g, "-")
+  const normLabel = category.label.trim()
+
+  if (!normId || !normLabel) return current
+
+  const filtered = current.filter((c) => c.id !== normId)
+  const updated = [...filtered, { id: normId, label: normLabel }]
+
+  await saveStoreSettings({ categories: updated })
+  return updated
+}
+
+export async function updateStoreCategory(
+  oldId: string,
+  newCategory: CategoryItem
+): Promise<CategoryItem[]> {
+  const current = getStoreCategories()
+  const oldNorm = oldId.toLowerCase().trim()
+  const newNormId = newCategory.id
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9_-]/g, "-")
+    .replace(/-+/g, "-")
+  const newNormLabel = newCategory.label.trim()
+
+  if (!newNormId || !newNormLabel) return current
+
+  // If the category ID/slug changed, update all products using the old ID
+  if (oldNorm !== newNormId) {
+    const allProds = getAllProducts()
+    for (const p of allProds) {
+      if (p.category?.toLowerCase()?.trim() === oldNorm) {
+        updateProduct(p.id, { category: newNormId })
+      }
+    }
+  }
+
+  const updated = current.map((c) => {
+    if (c.id === oldNorm) {
+      return { id: newNormId, label: newNormLabel }
+    }
+    return c
+  })
+
+  await saveStoreSettings({ categories: updated })
+  return updated
+}
+
+export async function deleteStoreCategory(
+  id: string,
+  reassignToId?: string
+): Promise<{ success: boolean; affectedCount: number }> {
+  const normId = id.toLowerCase().trim()
+  const allProds = getAllProducts()
+  const affected = allProds.filter((p) => p.category?.toLowerCase()?.trim() === normId)
+
+  if (reassignToId) {
+    const targetNorm = reassignToId.toLowerCase().trim()
+    for (const p of affected) {
+      updateProduct(p.id, { category: targetNorm })
+    }
+  }
+
+  const current = getStoreCategories()
+  const updated = current.filter((c) => c.id !== normId)
+
+  await saveStoreSettings({ categories: updated })
+  return { success: true, affectedCount: affected.length }
 }
 
 // -------------------------------------------------------------

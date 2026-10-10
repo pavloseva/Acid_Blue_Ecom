@@ -56,6 +56,12 @@ import {
   addCustomProduct,
   updateProduct,
   deleteProduct,
+  getStoreCategories,
+  addStoreCategory,
+  updateStoreCategory,
+  deleteStoreCategory,
+  getCategoryLabelFromStore,
+  type CategoryItem,
   syncStoreWithCloud,
   uploadMediaToCloud,
   getEmails,
@@ -138,7 +144,7 @@ export default function AdminDashboardPage() {
   const [loginError, setLoginError] = useState("")
 
   // Dashboard navigation tab
-  const [activeTab, setActiveTab] = useState<"orders" | "products" | "emails" | "settings">("orders")
+  const [activeTab, setActiveTab] = useState<"orders" | "products" | "categories" | "emails" | "settings">("orders")
 
   // Orders State
   const [orders, setOrders] = useState<Order[]>([])
@@ -152,6 +158,20 @@ export default function AdminDashboardPage() {
   const [productSearch, setProductSearch] = useState("")
   const [isAddProductOpen, setIsAddProductOpen] = useState(false)
   const [editingProductId, setEditingProductId] = useState<string | null>(null)
+
+  // Categories State
+  const [categoriesList, setCategoriesList] = useState<CategoryItem[]>([])
+  const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false)
+  const [editingCategory, setEditingCategory] = useState<CategoryItem | null>(null)
+  const [categoryFormLabel, setCategoryFormLabel] = useState("")
+  const [categoryFormId, setCategoryFormId] = useState("")
+  const [categoryFormError, setCategoryFormError] = useState("")
+  const [isSavingCategory, setIsSavingCategory] = useState(false)
+
+  // Delete Category Modal State
+  const [deletingCategory, setDeletingCategory] = useState<CategoryItem | null>(null)
+  const [reassignTargetCatId, setReassignTargetCatId] = useState("")
+  const [isDeletingCategory, setIsDeletingCategory] = useState(false)
 
   // Emails State
   const [emailsList, setEmailsList] = useState<EmailRecord[]>([])
@@ -187,10 +207,13 @@ export default function AdminDashboardPage() {
   const [newProductBadge, setNewProductBadge] = useState("Nuevo")
 
   const availableCategories = useMemo(() => {
+    if (categoriesList.length > 0) {
+      return categoriesList.map((c) => c.id)
+    }
     const base = ["almohadon", "poster", "taza", "bolso", "remera", "accesorio", "cuadro"]
     const fromProducts = productsList.map((p) => p.category?.toLowerCase()?.trim()).filter(Boolean)
     return Array.from(new Set([...base, ...fromProducts]))
-  }, [productsList])
+  }, [categoriesList, productsList])
 
   const [isSyncing, setIsSyncing] = useState(false)
 
@@ -199,6 +222,7 @@ export default function AdminDashboardPage() {
     setOrders(getOrders())
     setProductsList(getAllProducts())
     setEmailsList(getEmails())
+    setCategoriesList(getStoreCategories())
     const curSettings = getStoreSettings()
     setStoreSettings(curSettings)
     setMinAmountInput(curSettings.minPurchaseAmount.toString())
@@ -529,6 +553,91 @@ Total: ${formatARS(order.total)}`
     }
   }
 
+  // Category management handlers
+  const handleOpenNewCategory = () => {
+    setEditingCategory(null)
+    setCategoryFormLabel("")
+    setCategoryFormId("")
+    setCategoryFormError("")
+    setIsCategoryModalOpen(true)
+  }
+
+  const handleStartEditCategory = (cat: CategoryItem) => {
+    setEditingCategory(cat)
+    setCategoryFormLabel(cat.label)
+    setCategoryFormId(cat.id)
+    setCategoryFormError("")
+    setIsCategoryModalOpen(true)
+  }
+
+  const handleSaveCategorySubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setCategoryFormError("")
+    const labelTrimmed = categoryFormLabel.trim()
+    const idTrimmed = (
+      categoryFormId.trim() ||
+      labelTrimmed
+        .toLowerCase()
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .replace(/[^a-z0-9]+/g, "-")
+        .replace(/^-+|-+$/g, "")
+    ).toLowerCase()
+
+    if (!labelTrimmed) {
+      setCategoryFormError("Ingresá un nombre para la categoría.")
+      return
+    }
+
+    if (!idTrimmed) {
+      setCategoryFormError("Ingresá un identificador o slug válido.")
+      return
+    }
+
+    setIsSavingCategory(true)
+    try {
+      if (editingCategory) {
+        await updateStoreCategory(editingCategory.id, {
+          id: idTrimmed,
+          label: labelTrimmed,
+        })
+      } else {
+        await addStoreCategory({
+          id: idTrimmed,
+          label: labelTrimmed,
+        })
+      }
+      setIsCategoryModalOpen(false)
+      syncStore()
+    } catch (err) {
+      setCategoryFormError("Ocurrió un error al guardar la categoría.")
+    } finally {
+      setIsSavingCategory(false)
+    }
+  }
+
+  const handleStartDeleteCategory = (cat: CategoryItem) => {
+    setDeletingCategory(cat)
+    const otherCats = categoriesList.filter((c) => c.id !== cat.id)
+    setReassignTargetCatId(otherCats[0]?.id || "general")
+  }
+
+  const handleConfirmDeleteCategory = async () => {
+    if (!deletingCategory) return
+    setIsDeletingCategory(true)
+    try {
+      const affected = productsList.filter(
+        (p) => p.category?.toLowerCase()?.trim() === deletingCategory.id.toLowerCase().trim()
+      )
+      const target = affected.length > 0 ? reassignTargetCatId : undefined
+      await deleteStoreCategory(deletingCategory.id, target)
+      setDeletingCategory(null)
+      syncStore()
+    } finally {
+      setIsDeletingCategory(false)
+    }
+  }
+
   // Filtered orders
   const filteredOrders = orders.filter((order) => {
     if (!order) return false
@@ -696,6 +805,18 @@ Total: ${formatARS(order.total)}`
               </button>
               <button
                 type="button"
+                onClick={() => setActiveTab("categories")}
+                className={`px-4 py-1.5 rounded-lg text-xs font-medium boty-transition flex items-center gap-2 ${
+                  activeTab === "categories"
+                    ? "bg-primary text-primary-foreground shadow-sm"
+                    : "text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                <Tag className="w-3.5 h-3.5" />
+                Categorías ({categoriesList.length})
+              </button>
+              <button
+                type="button"
                 onClick={() => setActiveTab("emails")}
                 className={`px-4 py-1.5 rounded-lg text-xs font-medium boty-transition flex items-center gap-2 ${
                   activeTab === "emails"
@@ -745,11 +866,11 @@ Total: ${formatARS(order.total)}`
         </div>
 
         {/* Mobile Tab Switcher */}
-        <div className="sm:hidden flex items-center gap-2 mt-3 pt-3 border-t border-border">
+        <div className="sm:hidden flex items-center gap-1.5 mt-3 pt-3 border-t border-border overflow-x-auto pb-1">
           <button
             type="button"
             onClick={() => setActiveTab("orders")}
-            className={`flex-1 py-2 rounded-lg text-xs font-medium text-center ${
+            className={`flex-1 min-w-[70px] py-2 rounded-lg text-xs font-medium text-center ${
               activeTab === "orders" ? "bg-primary text-primary-foreground" : "bg-background text-muted-foreground"
             }`}
           >
@@ -758,7 +879,7 @@ Total: ${formatARS(order.total)}`
           <button
             type="button"
             onClick={() => setActiveTab("products")}
-            className={`flex-1 py-2 rounded-lg text-xs font-medium text-center ${
+            className={`flex-1 min-w-[75px] py-2 rounded-lg text-xs font-medium text-center ${
               activeTab === "products" ? "bg-primary text-primary-foreground" : "bg-background text-muted-foreground"
             }`}
           >
@@ -766,8 +887,17 @@ Total: ${formatARS(order.total)}`
           </button>
           <button
             type="button"
+            onClick={() => setActiveTab("categories")}
+            className={`flex-1 min-w-[80px] py-2 rounded-lg text-xs font-medium text-center ${
+              activeTab === "categories" ? "bg-primary text-primary-foreground" : "bg-background text-muted-foreground"
+            }`}
+          >
+            Categorías
+          </button>
+          <button
+            type="button"
             onClick={() => setActiveTab("emails")}
-            className={`flex-1 py-2 rounded-lg text-xs font-medium text-center ${
+            className={`flex-1 min-w-[65px] py-2 rounded-lg text-xs font-medium text-center ${
               activeTab === "emails" ? "bg-primary text-primary-foreground" : "bg-background text-muted-foreground"
             }`}
           >
@@ -776,7 +906,7 @@ Total: ${formatARS(order.total)}`
           <button
             type="button"
             onClick={() => setActiveTab("settings")}
-            className={`flex-1 py-2 rounded-lg text-xs font-medium text-center ${
+            className={`flex-1 min-w-[65px] py-2 rounded-lg text-xs font-medium text-center ${
               activeTab === "settings" ? "bg-primary text-primary-foreground" : "bg-background text-muted-foreground"
             }`}
           >
@@ -1158,14 +1288,24 @@ Total: ${formatARS(order.total)}`
                 </p>
               </div>
 
-              <button
-                type="button"
-                onClick={handleOpenNewProduct}
-                className="bg-primary text-primary-foreground font-semibold px-5 py-2.5 rounded-xl hover:bg-primary/90 boty-transition flex items-center justify-center gap-2 text-sm boty-shadow"
-              >
-                <Plus className="w-4 h-4" />
-                Agregar Nuevo Producto
-              </button>
+              <div className="flex flex-wrap items-center gap-2.5">
+                <button
+                  type="button"
+                  onClick={() => setActiveTab("categories")}
+                  className="bg-background border border-border hover:bg-muted text-foreground text-xs font-medium px-4 py-2.5 rounded-xl boty-transition flex items-center justify-center gap-1.5"
+                >
+                  <Tag className="w-3.5 h-3.5 text-primary" />
+                  Gestionar Categorías ({categoriesList.length})
+                </button>
+                <button
+                  type="button"
+                  onClick={handleOpenNewProduct}
+                  className="bg-primary text-primary-foreground font-semibold px-5 py-2.5 rounded-xl hover:bg-primary/90 boty-transition flex items-center justify-center gap-2 text-sm boty-shadow"
+                >
+                  <Plus className="w-4 h-4" />
+                  Agregar Nuevo Producto
+                </button>
+              </div>
             </div>
 
             {/* Search */}
@@ -1227,7 +1367,7 @@ Total: ${formatARS(order.total)}`
                       <div>
                         <div className="flex items-center justify-between mb-1">
                           <span className="text-[10px] px-2 py-0.5 rounded-full bg-background border border-border font-mono text-muted-foreground">
-                            {getCategoryLabel(product.category)}
+                            {getCategoryLabelFromStore(product.category)}
                           </span>
                           <span className="text-[10px] text-muted-foreground font-mono">
                             {product.imageFit === "contain" ? "100% Completa" : "Recortada 1:1"}
@@ -1292,7 +1432,129 @@ Total: ${formatARS(order.total)}`
         )}
 
         {/* ------------------------------------------------------------- */}
-        {/* TAB 3: EMAILS ENVIADOS */}
+        {/* TAB 3: CATEGORÍAS */}
+        {/* ------------------------------------------------------------- */}
+        {activeTab === "categories" && (
+          <section className="space-y-6">
+            {/* Header & Controls */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-card p-5 rounded-2xl border border-border boty-shadow">
+              <div>
+                <h2 className="font-serif text-2xl font-bold text-foreground flex items-center gap-2.5">
+                  <Tag className="w-6 h-6 text-primary" />
+                  Gestión de Categorías
+                </h2>
+                <p className="text-sm text-muted-foreground mt-1">
+                  Creá, editá nombres o eliminá categorías. Los cambios se actualizan automáticamente en la tienda y en los filtros.
+                </p>
+              </div>
+
+              <button
+                type="button"
+                onClick={handleOpenNewCategory}
+                className="bg-primary text-primary-foreground font-semibold px-5 py-2.5 rounded-xl hover:bg-primary/90 boty-transition flex items-center justify-center gap-2 text-sm boty-shadow"
+              >
+                <Plus className="w-4 h-4" />
+                Nueva Categoría
+              </button>
+            </div>
+
+            {/* Category Stats Cards */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div className="bg-card p-4 rounded-2xl border border-border">
+                <span className="text-xs text-muted-foreground uppercase tracking-wider block mb-1">
+                  Categorías Totales
+                </span>
+                <span className="text-2xl font-serif font-bold text-foreground">
+                  {categoriesList.length}
+                </span>
+              </div>
+              <div className="bg-card p-4 rounded-2xl border border-border">
+                <span className="text-xs text-muted-foreground uppercase tracking-wider block mb-1">
+                  Con Productos Activos
+                </span>
+                <span className="text-2xl font-serif font-bold text-primary">
+                  {categoriesList.filter((c) => productsList.some((p) => p.category?.toLowerCase()?.trim() === c.id.toLowerCase().trim())).length}
+                </span>
+              </div>
+              <div className="bg-card p-4 rounded-2xl border border-border">
+                <span className="text-xs text-muted-foreground uppercase tracking-wider block mb-1">
+                  Sin Productos (Vacías)
+                </span>
+                <span className="text-2xl font-serif font-bold text-muted-foreground">
+                  {categoriesList.filter((c) => !productsList.some((p) => p.category?.toLowerCase()?.trim() === c.id.toLowerCase().trim())).length}
+                </span>
+              </div>
+            </div>
+
+            {/* Categories List */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {categoriesList.map((cat) => {
+                const assignedProducts = productsList.filter(
+                  (p) => p.category?.toLowerCase()?.trim() === cat.id.toLowerCase().trim()
+                )
+                const count = assignedProducts.length
+
+                return (
+                  <div
+                    key={cat.id}
+                    className="bg-card border border-border hover:border-primary/40 rounded-2xl p-5 boty-shadow boty-transition flex flex-col justify-between"
+                  >
+                    <div>
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-xs px-2.5 py-1 rounded-full font-mono bg-primary/10 text-primary border border-primary/20">
+                          {cat.id}
+                        </span>
+                        <span
+                          className={`text-xs px-2.5 py-0.5 rounded-full font-medium ${
+                            count > 0
+                              ? "bg-muted text-foreground"
+                              : "bg-destructive/10 text-destructive border border-destructive/20"
+                          }`}
+                        >
+                          {count} {count === 1 ? "producto" : "productos"}
+                        </span>
+                      </div>
+
+                      <h3 className="font-serif text-lg font-bold text-foreground mb-1">
+                        {cat.label}
+                      </h3>
+                      <p className="text-xs text-muted-foreground">
+                        {count > 0
+                          ? `Asociada a ${count} ${count === 1 ? "producto" : "productos"} en catálogo.`
+                          : "Categoría vacía. Podés asignarle productos o eliminarla."}
+                      </p>
+                    </div>
+
+                    <div className="mt-5 pt-3 border-t border-border/50 flex items-center justify-end gap-2">
+                      <button
+                        type="button"
+                        onClick={() => handleStartEditCategory(cat)}
+                        className="p-2 rounded-lg bg-background hover:bg-muted text-muted-foreground hover:text-foreground border border-border boty-transition flex items-center gap-1.5 text-xs px-3"
+                        title="Editar nombre o slug de categoría"
+                      >
+                        <Edit className="w-3.5 h-3.5" />
+                        Editar
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => handleStartDeleteCategory(cat)}
+                        className="p-2 rounded-lg bg-destructive/10 hover:bg-destructive/20 text-destructive border border-destructive/20 boty-transition flex items-center gap-1.5 text-xs px-3"
+                        title="Eliminar categoría"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                        Eliminar
+                      </button>
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          </section>
+        )}
+
+        {/* ------------------------------------------------------------- */}
+        {/* TAB 4: EMAILS ENVIADOS */}
         {/* ------------------------------------------------------------- */}
         {activeTab === "emails" && (
           <section className="space-y-6">
@@ -1688,7 +1950,7 @@ Total: ${formatARS(order.total)}`
                     >
                       {availableCategories.map((cat) => (
                         <option key={cat} value={cat}>
-                          {getCategoryLabel(cat)}
+                          {getCategoryLabelFromStore(cat)}
                         </option>
                       ))}
                       <option value="__custom__">➕ Crear nueva categoría...</option>
@@ -2069,6 +2331,231 @@ Total: ${formatARS(order.total)}`
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* ------------------------------------------------------------- */}
+      {/* MODAL: CREAR / EDITAR CATEGORÍA */}
+      {/* ------------------------------------------------------------- */}
+      {isCategoryModalOpen && (
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-card border border-border rounded-3xl max-w-md w-full p-6 boty-shadow relative animate-blur-in">
+            <button
+              type="button"
+              onClick={() => setIsCategoryModalOpen(false)}
+              className="absolute right-5 top-5 p-2 rounded-full hover:bg-muted text-muted-foreground hover:text-foreground boty-transition"
+            >
+              <X className="w-5 h-5" />
+            </button>
+
+            <div className="flex items-center gap-2.5 mb-5">
+              <div className="p-2.5 rounded-xl bg-primary/10 text-primary border border-primary/20">
+                <Tag className="w-5 h-5" />
+              </div>
+              <div>
+                <h3 className="font-serif text-xl font-bold text-foreground">
+                  {editingCategory ? "Editar Categoría" : "Nueva Categoría"}
+                </h3>
+                <p className="text-xs text-muted-foreground">
+                  {editingCategory
+                    ? "Modificá el nombre visible y el identificador."
+                    : "Creá una categoría para clasificar productos en la tienda."}
+                </p>
+              </div>
+            </div>
+
+            <form onSubmit={handleSaveCategorySubmit} className="space-y-4">
+              {categoryFormError && (
+                <div className="p-3 rounded-xl bg-destructive/10 border border-destructive/20 text-destructive text-xs">
+                  {categoryFormError}
+                </div>
+              )}
+
+              <div>
+                <label className="block text-xs font-semibold text-foreground uppercase tracking-wider mb-1.5">
+                  Nombre Visible *
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={categoryFormLabel}
+                  onChange={(e) => {
+                    const val = e.target.value
+                    setCategoryFormLabel(val)
+                    if (!editingCategory) {
+                      const autoSlug = val
+                        .toLowerCase()
+                        .normalize("NFD")
+                        .replace(/[\u0300-\u036f]/g, "")
+                        .replace(/[^a-z0-9]+/g, "-")
+                        .replace(/^-+|-+$/g, "")
+                      setCategoryFormId(autoSlug)
+                    }
+                  }}
+                  placeholder="Ej: Remeras, Bolsos, Cuadros..."
+                  className="w-full bg-background border border-border rounded-xl px-4 py-2.5 text-sm text-foreground focus:outline-none focus:border-primary boty-transition"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-foreground uppercase tracking-wider mb-1.5">
+                  Identificador URL / Slug *
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={categoryFormId}
+                  onChange={(e) =>
+                    setCategoryFormId(
+                      e.target.value
+                        .toLowerCase()
+                        .replace(/[^a-z0-9_-]/g, "-")
+                        .replace(/-+/g, "-")
+                    )
+                  }
+                  placeholder="ej: remeras, bolsos, cuadros"
+                  className="w-full bg-background border border-border rounded-xl px-4 py-2.5 text-sm font-mono text-foreground focus:outline-none focus:border-primary boty-transition"
+                />
+                <p className="text-[11px] text-muted-foreground mt-1">
+                  En minúsculas, sin espacios ni tildes. Se usa internamente y en la URL.
+                </p>
+              </div>
+
+              {editingCategory && (
+                <p className="text-[11px] text-amber-500/90 bg-amber-500/10 p-2.5 rounded-xl border border-amber-500/20">
+                  ⚠️ Si cambiás el slug, todos los productos que usaban "{editingCategory.id}" se actualizarán automáticamente.
+                </p>
+              )}
+
+              <div className="pt-3 border-t border-border flex items-center justify-end gap-2.5">
+                <button
+                  type="button"
+                  onClick={() => setIsCategoryModalOpen(false)}
+                  className="px-4 py-2 rounded-xl border border-border text-foreground hover:bg-muted text-xs boty-transition"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  disabled={isSavingCategory}
+                  className="bg-primary text-primary-foreground font-semibold px-5 py-2 rounded-xl hover:bg-primary/90 text-xs boty-transition boty-shadow flex items-center gap-1.5"
+                >
+                  {isSavingCategory && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+                  {editingCategory ? "Guardar Cambios" : "Crear Categoría"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ------------------------------------------------------------- */}
+      {/* MODAL: ELIMINAR CATEGORÍA */}
+      {/* ------------------------------------------------------------- */}
+      {deletingCategory && (
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-card border border-destructive/40 rounded-3xl max-w-md w-full p-6 boty-shadow relative animate-blur-in">
+            <button
+              type="button"
+              onClick={() => setDeletingCategory(null)}
+              className="absolute right-5 top-5 p-2 rounded-full hover:bg-muted text-muted-foreground hover:text-foreground boty-transition"
+            >
+              <X className="w-5 h-5" />
+            </button>
+
+            <div className="flex items-center gap-2.5 mb-4">
+              <div className="p-2.5 rounded-xl bg-destructive/10 text-destructive border border-destructive/20">
+                <Trash2 className="w-5 h-5" />
+              </div>
+              <div>
+                <h3 className="font-serif text-xl font-bold text-foreground">
+                  Eliminar Categoría
+                </h3>
+                <p className="text-xs text-muted-foreground font-mono">
+                  {deletingCategory.label} ({deletingCategory.id})
+                </p>
+              </div>
+            </div>
+
+            {(() => {
+              const affectedProducts = productsList.filter(
+                (p) => p.category?.toLowerCase()?.trim() === deletingCategory.id.toLowerCase().trim()
+              )
+              const count = affectedProducts.length
+              const otherCategories = categoriesList.filter((c) => c.id !== deletingCategory.id)
+
+              return (
+                <div className="space-y-4">
+                  {count === 0 ? (
+                    <div className="p-3.5 rounded-2xl bg-muted/50 border border-border text-xs text-foreground/80 space-y-1">
+                      <p>
+                        Esta categoría no tiene productos asignados actualmente.
+                      </p>
+                      <p className="text-muted-foreground">
+                        Se eliminará permanentemente de la tienda y del panel.
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="space-y-3">
+                      <div className="p-3.5 rounded-2xl bg-destructive/10 border border-destructive/20 text-xs text-destructive">
+                        <p className="font-semibold mb-1">
+                          ⚠️ Hay {count} {count === 1 ? "producto asignado" : "productos asignados"} a esta categoría:
+                        </p>
+                        <p className="text-foreground/80 line-clamp-2">
+                          {affectedProducts.map((p) => p.name).join(", ")}
+                        </p>
+                      </div>
+
+                      {otherCategories.length > 0 ? (
+                        <div>
+                          <label className="block text-xs font-semibold text-foreground uppercase tracking-wider mb-1.5">
+                            ¿A qué categoría querés mover estos productos? *
+                          </label>
+                          <select
+                            value={reassignTargetCatId}
+                            onChange={(e) => setReassignTargetCatId(e.target.value)}
+                            className="w-full bg-background border border-border rounded-xl px-4 py-2.5 text-sm text-foreground focus:outline-none focus:border-primary boty-transition"
+                          >
+                            {otherCategories.map((c) => (
+                              <option key={c.id} value={c.id}>
+                                {c.label} ({c.id})
+                              </option>
+                            ))}
+                          </select>
+                          <p className="text-[11px] text-muted-foreground mt-1">
+                            Los {count} productos pasarán automáticamente a la categoría seleccionada para no perderse.
+                          </p>
+                        </div>
+                      ) : (
+                        <p className="text-xs text-muted-foreground">
+                          No quedan otras categorías para reasignar.
+                        </p>
+                      )}
+                    </div>
+                  )}
+
+                  <div className="pt-3 border-t border-border flex items-center justify-end gap-2.5">
+                    <button
+                      type="button"
+                      onClick={() => setDeletingCategory(null)}
+                      className="px-4 py-2 rounded-xl border border-border text-foreground hover:bg-muted text-xs boty-transition"
+                    >
+                      Cancelar
+                    </button>
+                    <button
+                      type="button"
+                      disabled={isDeletingCategory}
+                      onClick={handleConfirmDeleteCategory}
+                      className="bg-destructive text-destructive-foreground font-semibold px-5 py-2 rounded-xl hover:bg-destructive/90 text-xs boty-transition boty-shadow flex items-center gap-1.5"
+                    >
+                      {isDeletingCategory && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+                      {count > 0 ? "Mover Productos y Eliminar" : "Eliminar Categoría"}
+                    </button>
+                  </div>
+                </div>
+              )
+            })()}
           </div>
         </div>
       )}

@@ -7,8 +7,8 @@ import { ShoppingBag, SlidersHorizontal, X } from "lucide-react"
 import { Header } from "@/components/boty/header"
 import { Footer } from "@/components/boty/footer"
 import { useCart } from "@/components/boty/cart-context"
-import { products, categoryLabels, getCategoryLabel, formatARS, type Category, type Product } from "@/lib/products"
-import { getAllProducts, syncStoreWithCloud } from "@/lib/store"
+import { products, categoryLabels, formatARS, type Category, type Product } from "@/lib/products"
+import { getAllProducts, syncStoreWithCloud, getStoreCategories, getCategoryLabelFromStore } from "@/lib/store"
 
 export default function ShopPage() {
   const [allProducts, setAllProducts] = useState<Product[]>(products)
@@ -18,13 +18,16 @@ export default function ShopPage() {
   const gridRef = useRef<HTMLDivElement>(null)
 
   const filters = useMemo(() => {
-    const dynamicCats = Array.from(new Set(allProducts.map((p) => p.category).filter(Boolean)))
-    const baseCats = dynamicCats.length > 0 ? dynamicCats : ["almohadon", "poster", "taza"]
+    const storeCats = getStoreCategories()
+    const activeCatIds = new Set(allProducts.map((p) => p.category?.toLowerCase()?.trim()).filter(Boolean))
+    const activeCats = storeCats.filter((c) => activeCatIds.has(c.id.toLowerCase()))
+    const catsToShow = activeCats.length > 0 ? activeCats : storeCats
+
     return [
       { value: "all", label: "Todo" },
-      ...baseCats.map((cat) => ({
-        value: cat,
-        label: getCategoryLabel(cat),
+      ...catsToShow.map((cat) => ({
+        value: cat.id,
+        label: cat.label,
       })),
     ]
   }, [allProducts])
