@@ -128,12 +128,75 @@ export async function fetchProductsFromCloud(): Promise<Product[]> {
     if (!res.ok) throw new Error(`HTTP error ${res.status}`)
     const rows = await res.json()
     if (Array.isArray(rows) && rows.length > 0) {
-      return rows.map(mapDbToProduct)
+      return rows
+        .filter((r) => r.category !== "system_settings" && r.id !== "store_settings")
+        .map(mapDbToProduct)
     }
     return fallbackProducts
   } catch (err) {
     console.warn("Could not load products from Supabase, using local fallback:", err)
     return fallbackProducts
+  }
+}
+
+export async function fetchStoreSettingsFromCloud(): Promise<{
+  minPurchaseAmount: number
+  customLeadTimeDays: string
+  bannerNotice?: string
+} | null> {
+  try {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/products?id=eq.store_settings&select=*`, {
+      headers: getHeaders(),
+      cache: "no-store",
+    })
+    if (!res.ok) return null
+    const rows = await res.json()
+    if (Array.isArray(rows) && rows.length > 0) {
+      const row = rows[0]
+      let parsed: any = {}
+      try {
+        parsed = typeof row.description === "string" ? JSON.parse(row.description) : {}
+      } catch {}
+      return {
+        minPurchaseAmount: Number(row.price) || 0,
+        customLeadTimeDays: parsed.customLeadTimeDays || "4 a 5 días hábiles desde el pago",
+        bannerNotice: parsed.bannerNotice,
+        ...parsed,
+      }
+    }
+    return null
+  } catch (err) {
+    console.warn("Could not load store settings from Supabase:", err)
+    return null
+  }
+}
+
+export async function saveStoreSettingsToCloud(settings: {
+  minPurchaseAmount: number
+  customLeadTimeDays: string
+  bannerNotice?: string
+}): Promise<boolean> {
+  try {
+    const payload = {
+      id: "store_settings",
+      name: "Configuración de Tienda",
+      category: "system_settings",
+      price: settings.minPurchaseAmount,
+      image: "/placeholder.svg",
+      description: JSON.stringify(settings),
+    }
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/products`, {
+      method: "POST",
+      headers: getHeaders({
+        "Content-Type": "application/json",
+        Prefer: "resolution=merge-duplicates",
+      }),
+      body: JSON.stringify(payload),
+    })
+    return res.ok
+  } catch (err) {
+    console.error("Error saving store settings to Supabase:", err)
+    return false
   }
 }
 

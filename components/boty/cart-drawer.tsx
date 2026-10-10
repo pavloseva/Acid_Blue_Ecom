@@ -1,6 +1,6 @@
 "use client"
 
-import { Minus, Plus, Trash2, ShoppingBag, CheckCircle } from "lucide-react"
+import { Minus, Plus, Trash2, ShoppingBag, CheckCircle, AlertCircle, Clock } from "lucide-react"
 import Image from "next/image"
 import {
   Drawer,
@@ -12,12 +12,23 @@ import {
   DrawerTitle,
 } from "@/components/ui/drawer"
 import { useCart } from "./cart-context"
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { formatARS } from "@/lib/products"
-import { saveOrder } from "@/lib/store"
+import { saveOrder, getStoreSettings, DEFAULT_SETTINGS } from "@/lib/store"
 
 export function CartDrawer() {
   const { items, removeItem, updateQuantity, isOpen, setIsOpen, itemCount, subtotal, clearCart } = useCart()
+  const [settings, setSettings] = useState(DEFAULT_SETTINGS)
+
+  useEffect(() => {
+    const sync = () => setSettings(getStoreSettings())
+    sync()
+    window.addEventListener("acid_store_updated", sync)
+    return () => window.removeEventListener("acid_store_updated", sync)
+  }, [])
+
+  const isBelowMin = settings.minPurchaseAmount > 0 && subtotal < settings.minPurchaseAmount
+  const remainingForMin = isBelowMin ? settings.minPurchaseAmount - subtotal : 0
 
   const shipping = 0
   const total = subtotal + shipping
@@ -33,6 +44,7 @@ export function CartDrawer() {
   const [isSubmitting, setIsSubmitting] = useState(false)
 
   const handleCheckout = () => {
+    if (isBelowMin) return
     setCheckoutOpen(true)
   }
 
@@ -187,14 +199,54 @@ export function CartDrawer() {
                 </div>
               </div>
 
+              {/* Minimum Purchase Progress / Alert */}
+              {settings.minPurchaseAmount > 0 && (
+                <div className="pt-2">
+                  {isBelowMin ? (
+                    <div className="bg-amber-500/10 border border-amber-500/25 rounded-2xl p-3.5 space-y-2">
+                      <div className="flex items-center justify-between text-xs font-semibold text-amber-400">
+                        <span className="flex items-center gap-1.5">
+                          <AlertCircle className="w-4 h-4 flex-shrink-0" />
+                          Compra mínima: {formatARS(settings.minPurchaseAmount)}
+                        </span>
+                        <span>Faltan {formatARS(remainingForMin)}</span>
+                      </div>
+                      <div className="w-full bg-background/50 h-2 rounded-full overflow-hidden">
+                        <div
+                          className="bg-amber-400 h-full rounded-full transition-all duration-300"
+                          style={{
+                            width: `${Math.min(100, Math.round((subtotal / settings.minPurchaseAmount) * 100))}%`,
+                          }}
+                        />
+                      </div>
+                      <p className="text-[11px] text-muted-foreground">
+                        Agregá más productos para alcanzar el mínimo y completar tu compra.
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="bg-emerald-500/10 border border-emerald-500/25 rounded-xl px-3 py-2 text-xs text-emerald-400 flex items-center gap-2">
+                      <CheckCircle className="w-3.5 h-3.5 flex-shrink-0" />
+                      <span>¡Superaste la compra mínima requerida!</span>
+                    </div>
+                  )}
+                </div>
+              )}
+
               {!checkoutOpen ? (
                 /* Checkout Button */
                 <button
                   type="button"
                   onClick={handleCheckout}
-                  className="w-full bg-primary text-primary-foreground py-4 rounded-full font-medium hover:bg-primary/90 boty-transition"
+                  disabled={isBelowMin}
+                  className={`w-full py-4 rounded-full font-medium boty-transition ${
+                    isBelowMin
+                      ? "bg-muted text-muted-foreground cursor-not-allowed border border-border opacity-70"
+                      : "bg-primary text-primary-foreground hover:bg-primary/90"
+                  }`}
                 >
-                  Finalizar compra
+                  {isBelowMin
+                    ? `Faltan ${formatARS(remainingForMin)} para comprar`
+                    : "Finalizar compra"}
                 </button>
               ) : (
                 /* Checkout Form */
@@ -260,6 +312,15 @@ export function CartDrawer() {
                       placeholder="+54 9 351 ..."
                       className="mt-1 block w-full rounded-lg border border-border bg-background px-3 py-2 text-foreground transition-colors focus:border-primary"
                     />
+                  </div>
+
+                  {/* Lead Time Notice */}
+                  <div className="p-3 bg-muted/60 border border-border rounded-xl text-xs text-muted-foreground flex items-start gap-2.5">
+                    <Clock className="w-4 h-4 text-primary mt-0.5 flex-shrink-0" />
+                    <span>
+                      <strong className="text-foreground">Diseños personalizados:</strong> demora de producción de{" "}
+                      <strong className="text-primary">{settings.customLeadTimeDays}</strong> a partir del pago.
+                    </span>
                   </div>
 
                   <button

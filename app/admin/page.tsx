@@ -43,6 +43,8 @@ import {
   Inbox,
   Send,
   X,
+  SlidersHorizontal,
+  AlertCircle,
 } from "lucide-react"
 import {
   getOrders,
@@ -59,6 +61,10 @@ import {
   getEmails,
   sendNewsletterWelcomeEmail,
   sendOrderConfirmationEmail,
+  getStoreSettings,
+  saveStoreSettings,
+  DEFAULT_SETTINGS,
+  type StoreSettings,
   isAdminAuthenticated,
   adminLogout,
   adminLogin,
@@ -132,7 +138,7 @@ export default function AdminDashboardPage() {
   const [loginError, setLoginError] = useState("")
 
   // Dashboard navigation tab
-  const [activeTab, setActiveTab] = useState<"orders" | "products" | "emails">("orders")
+  const [activeTab, setActiveTab] = useState<"orders" | "products" | "emails" | "settings">("orders")
 
   // Orders State
   const [orders, setOrders] = useState<Order[]>([])
@@ -150,6 +156,14 @@ export default function AdminDashboardPage() {
   // Emails State
   const [emailsList, setEmailsList] = useState<EmailRecord[]>([])
   const [selectedEmail, setSelectedEmail] = useState<EmailRecord | null>(null)
+
+  // Settings State
+  const [storeSettings, setStoreSettings] = useState<StoreSettings>(DEFAULT_SETTINGS)
+  const [minAmountInput, setMinAmountInput] = useState<string>("15000")
+  const [leadTimeInput, setLeadTimeInput] = useState<string>("4 a 5 días hábiles desde el pago")
+  const [bannerNoticeInput, setBannerNoticeInput] = useState<string>("")
+  const [isSavingSettings, setIsSavingSettings] = useState(false)
+  const [settingsSavedSuccess, setSettingsSavedSuccess] = useState(false)
 
   // Product Form State (Add / Edit)
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -177,6 +191,11 @@ export default function AdminDashboardPage() {
     setOrders(getOrders())
     setProductsList(getAllProducts())
     setEmailsList(getEmails())
+    const curSettings = getStoreSettings()
+    setStoreSettings(curSettings)
+    setMinAmountInput(curSettings.minPurchaseAmount.toString())
+    setLeadTimeInput(curSettings.customLeadTimeDays)
+    setBannerNoticeInput(curSettings.bannerNotice || "")
   }
 
   const refreshFromCloud = async () => {
@@ -233,6 +252,22 @@ export default function AdminDashboardPage() {
     adminLogout()
     setIsAuthenticated(false)
     router.push("/admin/login")
+  }
+
+  const handleSaveSettings = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setIsSavingSettings(true)
+    setSettingsSavedSuccess(false)
+    const amount = parseInt(minAmountInput.replace(/[^0-9]/g, ""), 10) || 0
+    const updated = await saveStoreSettings({
+      minPurchaseAmount: amount,
+      customLeadTimeDays: leadTimeInput.trim() || "4 a 5 días hábiles desde el pago",
+      bannerNotice: bannerNoticeInput.trim() || (amount > 0 ? `Compra mínima: ${formatARS(amount)} · Envíos a todo el país` : ""),
+    })
+    setStoreSettings(updated)
+    setIsSavingSettings(false)
+    setSettingsSavedSuccess(true)
+    setTimeout(() => setSettingsSavedSuccess(false), 4000)
   }
 
   const handleStatusChange = (orderId: string, newStatus: OrderStatus) => {
@@ -655,6 +690,18 @@ Total: ${formatARS(order.total)}`
                 <Inbox className="w-3.5 h-3.5" />
                 Emails ({emailsList.length})
               </button>
+              <button
+                type="button"
+                onClick={() => setActiveTab("settings")}
+                className={`px-4 py-1.5 rounded-lg text-xs font-medium boty-transition flex items-center gap-2 ${
+                  activeTab === "settings"
+                    ? "bg-primary text-primary-foreground shadow-sm"
+                    : "text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                <SlidersHorizontal className="w-3.5 h-3.5" />
+                Ajustes
+              </button>
             </div>
           </div>
 
@@ -690,7 +737,7 @@ Total: ${formatARS(order.total)}`
               activeTab === "orders" ? "bg-primary text-primary-foreground" : "bg-background text-muted-foreground"
             }`}
           >
-            Órdenes ({orders.length})
+            Órdenes
           </button>
           <button
             type="button"
@@ -699,7 +746,7 @@ Total: ${formatARS(order.total)}`
               activeTab === "products" ? "bg-primary text-primary-foreground" : "bg-background text-muted-foreground"
             }`}
           >
-            Productos ({productsList.length})
+            Productos
           </button>
           <button
             type="button"
@@ -708,7 +755,16 @@ Total: ${formatARS(order.total)}`
               activeTab === "emails" ? "bg-primary text-primary-foreground" : "bg-background text-muted-foreground"
             }`}
           >
-            Emails ({emailsList.length})
+            Emails
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveTab("settings")}
+            className={`flex-1 py-2 rounded-lg text-xs font-medium text-center ${
+              activeTab === "settings" ? "bg-primary text-primary-foreground" : "bg-background text-muted-foreground"
+            }`}
+          >
+            Ajustes
           </button>
         </div>
       </header>
@@ -1291,6 +1347,225 @@ Total: ${formatARS(order.total)}`
                 ))}
               </div>
             )}
+          </section>
+        )}
+
+        {/* ------------------------------------------------------------- */}
+        {/* TAB 4: STORE SETTINGS / CONFIGURACIÓN */}
+        {/* ------------------------------------------------------------- */}
+        {activeTab === "settings" && (
+          <section className="space-y-8 animate-fade-in">
+            {/* Header */}
+            <div>
+              <h2 className="font-serif text-2xl lg:text-3xl font-bold text-foreground">
+                Ajustes de la Tienda
+              </h2>
+              <p className="text-sm text-muted-foreground">
+                Configurá el monto de compra mínima, los plazos de entrega para diseños personalizados y mensajes clave para tus clientes.
+              </p>
+            </div>
+
+            {settingsSavedSuccess && (
+              <div className="bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 rounded-2xl p-4 flex items-center gap-3 animate-fade-in">
+                <CheckCircle2 className="w-5 h-5 flex-shrink-0" />
+                <div>
+                  <p className="text-sm font-semibold">¡Ajustes guardados correctamente!</p>
+                  <p className="text-xs text-emerald-400/80">Los cambios ya están activos en la tienda y sincronizados con Supabase.</p>
+                </div>
+              </div>
+            )}
+
+            <form onSubmit={handleSaveSettings} className="space-y-6">
+              {/* Card 1: Compra Mínima */}
+              <div className="bg-card border border-border rounded-3xl p-6 lg:p-8 boty-shadow space-y-5">
+                <div className="flex items-start justify-between gap-4">
+                  <div className="flex items-center gap-3">
+                    <span className="w-10 h-10 rounded-2xl bg-primary/10 border border-primary/20 flex items-center justify-center text-primary">
+                      <DollarSign className="w-5 h-5" />
+                    </span>
+                    <div>
+                      <h3 className="font-serif text-lg font-bold text-foreground">
+                        Compra Mínima Obligatoria
+                      </h3>
+                      <p className="text-xs text-muted-foreground">
+                        Monto mínimo en pesos requerido en el carrito para que el cliente pueda finalizar su pedido.
+                      </p>
+                    </div>
+                  </div>
+                  <span className="text-xs font-mono font-bold text-primary bg-primary/10 px-3 py-1 rounded-full border border-primary/20">
+                    Actual: {formatARS(storeSettings.minPurchaseAmount)}
+                  </span>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-foreground uppercase tracking-wider mb-2">
+                    Monto en Pesos Argentinos ($ARS)
+                  </label>
+                  <div className="relative max-w-xs">
+                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground font-semibold">
+                      $
+                    </span>
+                    <input
+                      type="number"
+                      min="0"
+                      step="500"
+                      value={minAmountInput}
+                      onChange={(e) => setMinAmountInput(e.target.value)}
+                      placeholder="Ej: 15000"
+                      className="w-full bg-background border border-border rounded-xl pl-8 pr-4 py-3 text-foreground font-semibold text-base focus:outline-none focus:border-primary boty-transition"
+                    />
+                  </div>
+                  <p className="text-[11px] text-muted-foreground mt-1.5">
+                    Colocá <strong>0</strong> si no querés exigir un monto mínimo.
+                  </p>
+                </div>
+
+                {/* Quick Presets */}
+                <div>
+                  <span className="block text-xs text-muted-foreground mb-2">Valores rápidos:</span>
+                  <div className="flex flex-wrap gap-2">
+                    {[
+                      { label: "Sin mínimo ($0)", val: 0 },
+                      { label: "$5.000", val: 5000 },
+                      { label: "$10.000", val: 10000 },
+                      { label: "$12.900", val: 12900 },
+                      { label: "$15.000", val: 15000 },
+                      { label: "$20.000", val: 20000 },
+                      { label: "$25.000", val: 25000 },
+                      { label: "$30.000", val: 30000 },
+                    ].map((preset) => (
+                      <button
+                        key={preset.val}
+                        type="button"
+                        onClick={() => setMinAmountInput(preset.val.toString())}
+                        className={`text-xs px-3 py-1.5 rounded-full border boty-transition ${
+                          minAmountInput === preset.val.toString()
+                            ? "bg-primary text-primary-foreground border-primary font-medium"
+                            : "bg-background border-border text-muted-foreground hover:text-foreground"
+                        }`}
+                      >
+                        {preset.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="bg-background/60 border border-border/80 rounded-2xl p-4 text-xs text-muted-foreground flex items-start gap-2.5">
+                  <AlertCircle className="w-4 h-4 text-primary mt-0.5 flex-shrink-0" />
+                  <span>
+                    Si el subtotal del cliente es menor a este importe, el botón del carrito indicará cuánto le falta para completar la compra y bloqueará el checkout.
+                  </span>
+                </div>
+              </div>
+
+              {/* Card 2: Demora en Diseños Personalizados */}
+              <div className="bg-card border border-border rounded-3xl p-6 lg:p-8 boty-shadow space-y-5">
+                <div className="flex items-center gap-3">
+                  <span className="w-10 h-10 rounded-2xl bg-primary/10 border border-primary/20 flex items-center justify-center text-primary">
+                    <Clock className="w-5 h-5" />
+                  </span>
+                  <div>
+                    <h3 className="font-serif text-lg font-bold text-foreground">
+                      Demora de Diseños Personalizados
+                    </h3>
+                    <p className="text-xs text-muted-foreground">
+                      Plazo estimado de elaboración a partir de la acreditación del pago.
+                    </p>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-foreground uppercase tracking-wider mb-2">
+                    Texto explicativo del plazo
+                  </label>
+                  <input
+                    type="text"
+                    value={leadTimeInput}
+                    onChange={(e) => setLeadTimeInput(e.target.value)}
+                    placeholder="Ej: 4 a 5 días hábiles desde el pago"
+                    className="w-full bg-background border border-border rounded-xl px-4 py-3 text-foreground text-sm focus:outline-none focus:border-primary boty-transition"
+                  />
+                </div>
+
+                {/* Quick Presets */}
+                <div>
+                  <span className="block text-xs text-muted-foreground mb-2">Sugerencias rápidas:</span>
+                  <div className="flex flex-wrap gap-2">
+                    {[
+                      "4 a 5 días hábiles desde el pago",
+                      "3 a 5 días hábiles desde el pago",
+                      "5 a 7 días hábiles desde el pago",
+                      "24 a 48 hs hábiles desde el pago",
+                      "A coordinar por WhatsApp",
+                    ].map((preset) => (
+                      <button
+                        key={preset}
+                        type="button"
+                        onClick={() => setLeadTimeInput(preset)}
+                        className={`text-xs px-3 py-1.5 rounded-full border boty-transition ${
+                          leadTimeInput === preset
+                            ? "bg-primary text-primary-foreground border-primary font-medium"
+                            : "bg-background border-border text-muted-foreground hover:text-foreground"
+                        }`}
+                      >
+                        {preset}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              {/* Card 3: Banner de Aviso Superior */}
+              <div className="bg-card border border-border rounded-3xl p-6 lg:p-8 boty-shadow space-y-4">
+                <div className="flex items-center gap-3">
+                  <span className="w-10 h-10 rounded-2xl bg-primary/10 border border-primary/20 flex items-center justify-center text-primary">
+                    <Sparkles className="w-5 h-5" />
+                  </span>
+                  <div>
+                    <h3 className="font-serif text-lg font-bold text-foreground">
+                      Barra de Anuncio Superior
+                    </h3>
+                    <p className="text-xs text-muted-foreground">
+                      Aviso visible en la parte superior de la tienda para destacar la compra mínima o promociones.
+                    </p>
+                  </div>
+                </div>
+
+                <div>
+                  <input
+                    type="text"
+                    value={bannerNoticeInput}
+                    onChange={(e) => setBannerNoticeInput(e.target.value)}
+                    placeholder={`Compra mínima: ${formatARS(parseInt(minAmountInput) || 15000)} · Envíos a todo el país`}
+                    className="w-full bg-background border border-border rounded-xl px-4 py-3 text-foreground text-sm focus:outline-none focus:border-primary boty-transition"
+                  />
+                  <p className="text-[11px] text-muted-foreground mt-1.5">
+                    Dejalo en blanco para usar el texto automático generado a partir de la compra mínima.
+                  </p>
+                </div>
+              </div>
+
+              {/* Submit Button */}
+              <div className="flex items-center justify-end gap-4 pt-2">
+                <button
+                  type="submit"
+                  disabled={isSavingSettings}
+                  className="bg-primary text-primary-foreground font-semibold px-8 py-3.5 rounded-2xl hover:bg-primary/90 text-sm boty-transition boty-shadow flex items-center gap-2"
+                >
+                  {isSavingSettings ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      Guardando cambios...
+                    </>
+                  ) : (
+                    <>
+                      <Check className="w-4 h-4" />
+                      Guardar Configuración en la Nube
+                    </>
+                  )}
+                </button>
+              </div>
+            </form>
           </section>
         )}
       </main>

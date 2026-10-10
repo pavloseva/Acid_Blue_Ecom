@@ -11,9 +11,23 @@ import {
   updateOrderStatusInCloud,
   deleteOrderFromCloud,
   uploadMediaToCloud,
+  fetchStoreSettingsFromCloud,
+  saveStoreSettingsToCloud,
 } from "./supabase"
 
 export { uploadMediaToCloud }
+
+export interface StoreSettings {
+  minPurchaseAmount: number
+  customLeadTimeDays: string
+  bannerNotice?: string
+}
+
+export const DEFAULT_SETTINGS: StoreSettings = {
+  minPurchaseAmount: 15000,
+  customLeadTimeDays: "4 a 5 días hábiles desde el pago",
+  bannerNotice: "Compra mínima: $15.000 · Envíos a todo el país",
+}
 
 export type OrderStatus = "pendiente" | "en_preparacion" | "enviado" | "entregado" | "cancelado"
 
@@ -62,6 +76,7 @@ const MODIFIED_PRODUCTS_KEY = "acid_blue_modified_products_v1"
 const DELETED_PRODUCTS_KEY = "acid_blue_deleted_products_v1"
 const EMAILS_KEY = "acid_blue_emails_v1"
 const AUTH_KEY = "acid_blue_admin_auth_v1"
+const SETTINGS_KEY = "acid_blue_settings_v1"
 
 // Initial sample orders so the admin view isn't empty upon first opening
 const SAMPLE_ORDERS: Order[] = [
@@ -247,18 +262,62 @@ export function updateOrderStatus(orderId: string, status: OrderStatus): void {
   )
 }
 
+export function getStoreSettings(): StoreSettings {
+  if (!isClient()) return DEFAULT_SETTINGS
+  try {
+    const raw = localStorage.getItem(SETTINGS_KEY)
+    if (!raw) return DEFAULT_SETTINGS
+    const parsed = JSON.parse(raw)
+    return {
+      ...DEFAULT_SETTINGS,
+      ...parsed,
+      minPurchaseAmount: typeof parsed.minPurchaseAmount === "number" ? parsed.minPurchaseAmount : DEFAULT_SETTINGS.minPurchaseAmount,
+    }
+  } catch (err) {
+    console.error("Error reading store settings from localStorage:", err)
+    return DEFAULT_SETTINGS
+  }
+}
+
+export async function saveStoreSettings(settings: Partial<StoreSettings>): Promise<StoreSettings> {
+  const current = getStoreSettings()
+  const updated: StoreSettings = {
+    ...current,
+    ...settings,
+    minPurchaseAmount:
+      settings.minPurchaseAmount !== undefined
+        ? Number(settings.minPurchaseAmount)
+        : current.minPurchaseAmount,
+  }
+
+  if (isClient()) {
+    localStorage.setItem(SETTINGS_KEY, JSON.stringify(updated))
+    notifyStoreChange()
+  }
+
+  saveStoreSettingsToCloud(updated).catch((err) =>
+    console.warn("Error updating store settings in Supabase:", err)
+  )
+
+  return updated
+}
+
 export async function syncStoreWithCloud(): Promise<void> {
   if (!isClient()) return
   try {
-    const [cloudProducts, cloudOrders] = await Promise.all([
+    const [cloudProducts, cloudOrders, cloudSettings] = await Promise.all([
       fetchProductsFromCloud(),
       fetchOrdersFromCloud(),
+      fetchStoreSettingsFromCloud(),
     ])
     if (cloudProducts && cloudProducts.length > 0) {
       localStorage.setItem(PRODUCTS_KEY, JSON.stringify(cloudProducts))
     }
     if (Array.isArray(cloudOrders) && cloudOrders.length > 0) {
       localStorage.setItem(ORDERS_KEY, JSON.stringify(cloudOrders))
+    }
+    if (cloudSettings) {
+      localStorage.setItem(SETTINGS_KEY, JSON.stringify(cloudSettings))
     }
     notifyStoreChange()
   } catch (err) {

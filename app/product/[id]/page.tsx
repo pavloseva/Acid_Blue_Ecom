@@ -25,7 +25,7 @@ import { Header } from "@/components/boty/header"
 import { Footer } from "@/components/boty/footer"
 import { useCart } from "@/components/boty/cart-context"
 import { products, getProduct, formatARS, type Product } from "@/lib/products"
-import { getProductById, syncStoreWithCloud } from "@/lib/store"
+import { getProductById, syncStoreWithCloud, getStoreSettings, DEFAULT_SETTINGS } from "@/lib/store"
 
 const benefits = [
   { icon: Truck, label: "Envío a todo el país" },
@@ -43,6 +43,7 @@ export default function ProductPage() {
   const productId = params.id as string
   const baseProd = getProduct(productId)
   const [product, setProduct] = useState<Product | null>(baseProd || null)
+  const [settings, setSettings] = useState(DEFAULT_SETTINGS)
   const [isMounted, setIsMounted] = useState(false)
 
   const { addItem, setIsOpen } = useCart()
@@ -64,6 +65,7 @@ export default function ProductPage() {
       if (found) {
         setProduct(found)
       }
+      setSettings(getStoreSettings())
     }
     sync()
     syncStoreWithCloud()
@@ -460,6 +462,24 @@ export default function ProductPage() {
                     </div>
                   )
                 })}
+              </div>
+
+              {/* Custom Order & Minimum Purchase Notice */}
+              <div className="mb-8 p-4 rounded-2xl bg-card border border-primary/20 space-y-2 text-xs text-muted-foreground boty-shadow">
+                <div className="flex items-center gap-2 text-foreground font-medium">
+                  <Clock className="w-4 h-4 text-primary flex-shrink-0" />
+                  <span>
+                    Diseños personalizados: demora de <strong className="text-primary">{settings.customLeadTimeDays}</strong> desde el pago.
+                  </span>
+                </div>
+                {settings.minPurchaseAmount > 0 && (
+                  <div className="flex items-center gap-2">
+                    <ShieldCheck className="w-4 h-4 text-primary flex-shrink-0" />
+                    <span>
+                      Compra mínima en tienda: <strong className="text-foreground">{formatARS(settings.minPurchaseAmount)}</strong> por pedido.
+                    </span>
+                  </div>
+                )}
               </div>
 
               {/* Accordion */}

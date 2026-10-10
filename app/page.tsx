@@ -10,8 +10,8 @@ export default function HomePage() {
     <main>
       <Header />
       <Hero />
-      <TrustBadges />
       <ProductGrid />
+      <TrustBadges />
       <Testimonials />
       <Footer />
     </main>
