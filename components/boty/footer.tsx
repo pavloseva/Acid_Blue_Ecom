@@ -49,10 +49,10 @@ export function Footer() {
               Cosas lindas, buena vibra
             </p>
             <p className="text-[11px] uppercase tracking-wider text-accent/80 font-medium mb-3">
-              Mochilas • Bandoleras • Accesorios — PVC Cristal
+              Almohadones • Bolsos • Accesorios — DTF & Sublimación
             </p>
-            <p className="text-sm text-muted-foreground leading-relaxed mb-6 max-w-md">
-              Diseños funcionales y de alta resistencia en PVC cristal. Mochilas y bandoleras pensadas para recitales, eventos y tu estilo diario.
+            <p className="text-sm text-muted-foreground leading-relaxed mb-6">
+              Cosas funcionales con personalidad. Hechas para alegrar tu día a día. Lindas, cómodas y con un toque único.
             </p>
             <div className="flex gap-4">
               <a
