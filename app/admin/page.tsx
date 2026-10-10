@@ -82,14 +82,11 @@ import {
 import { categoryLabels, getCategoryLabel, formatARS, type Product, type Category } from "@/lib/products"
 
 const PRESET_IMAGES = [
-  { label: "Almohadón Azul", path: "/images/acid/cushion-blue-portrait.png" },
-  { label: "Almohadón Oscuro", path: "/images/acid/cushion-dark-portrait.png" },
-  { label: "Almohadón Mármol", path: "/images/acid/cushion-acid-marble.png" },
-  { label: "Almohadón Galaxia", path: "/images/acid/cushion-galaxy.png" },
-  { label: "Poster Abstracto", path: "/images/acid/poster-abstract.png" },
-  { label: "Poster Retrato", path: "/images/acid/poster-portrait.png" },
-  { label: "Taza Acid", path: "/images/acid/mug-acid.png" },
-  { label: "Taza Retrato", path: "/images/acid/mug-portrait.png" },
+  { label: "Bandolera Chica", path: "/images/products/bandolera-chica-1.jpg" },
+  { label: "Bandolera Grande", path: "/images/products/bandolera-grande-1.jpg" },
+  { label: "Mochila Negra", path: "/images/products/mochila-negra-1.jpg" },
+  { label: "Mochila Roja Chica", path: "/images/products/mochila-roja-chica-1.jpg" },
+  { label: "Mochila Roja y Negra", path: "/images/products/mochila-roja-negra-1.jpg" },
 ]
 
 const STATUS_CONFIG: Record<
@@ -193,17 +190,17 @@ export default function AdminDashboardPage() {
   const [uploadError, setUploadError] = useState("")
 
   const [newProductName, setNewProductName] = useState("")
-  const [newProductCategory, setNewProductCategory] = useState<Category>("almohadon")
+  const [newProductCategory, setNewProductCategory] = useState<Category>("mochilas-y-bolsos")
   const [isCustomCategory, setIsCustomCategory] = useState(false)
-  const [newProductOptionLabel, setNewProductOptionLabel] = useState("Medida")
-  const [newProductPrice, setNewProductPrice] = useState("")
+  const [newProductOptionLabel, setNewProductOptionLabel] = useState("Tamaño")
+  const [newProductPrice, setNewProductPrice] = useState("25000")
   const [newProductOriginalPrice, setNewProductOriginalPrice] = useState("")
   const [newProductImages, setNewProductImages] = useState<string[]>([])
   const [newProductVideo, setNewProductVideo] = useState("")
   const [newProductImageFit, setNewProductImageFit] = useState<"contain" | "cover">("contain")
   const [newProductTagline, setNewProductTagline] = useState("")
   const [newProductDescription, setNewProductDescription] = useState("")
-  const [newProductOptions, setNewProductOptions] = useState("40x40, 50x50")
+  const [newProductOptions, setNewProductOptions] = useState("Estándar")
   const [newProductBadge, setNewProductBadge] = useState("Nuevo")
 
   const availableCategories = useMemo(() => {
@@ -457,17 +454,17 @@ Total: ${formatARS(order.total)}`
   const handleOpenNewProduct = () => {
     setEditingProductId(null)
     setNewProductName("")
-    setNewProductCategory("almohadon")
+    setNewProductCategory("mochilas-y-bolsos")
     setIsCustomCategory(false)
-    setNewProductOptionLabel("Medida")
-    setNewProductPrice("")
+    setNewProductOptionLabel("Tamaño")
+    setNewProductPrice("25000")
     setNewProductOriginalPrice("")
     setNewProductTagline("")
     setNewProductDescription("")
     setNewProductImages([PRESET_IMAGES[0].path])
     setNewProductVideo("")
     setNewProductImageFit("contain")
-    setNewProductOptions("40x40, 50x50")
+    setNewProductOptions("Estándar")
     setNewProductBadge("Nuevo")
     setUploadError("")
     setIsAddProductOpen(true)

@@ -14,10 +14,10 @@ export function ProductGrid() {
   // Dynamically derive unique categories from the active products catalog
   const categories = useMemo(() => {
     const unique = Array.from(new Set(allProducts.map((p) => p.category).filter(Boolean)))
-    return unique.length > 0 ? unique : ["almohadon", "poster", "taza"]
+    return unique.length > 0 ? unique : ["mochilas-y-bolsos"]
   }, [allProducts])
 
-  const [selectedCategory, setSelectedCategory] = useState<Category>("almohadon")
+  const [selectedCategory, setSelectedCategory] = useState<Category>("mochilas-y-bolsos")
 
   // Ensure selectedCategory matches an available category
   useEffect(() => {
@@ -123,7 +123,7 @@ export function ProductGrid() {
             className={`text-lg text-muted-foreground max-w-md mx-auto ${headerVisible ? 'animate-blur-in opacity-0' : 'opacity-0'}`}
             style={headerVisible ? { animationDelay: '0.6s', animationFillMode: 'forwards' } : {}}
           >
-            Almohadones, bolsos y accesorios hechos con tecnología DTF & Sublimación
+            Mochilas, bandoleras y accesorios de diseño en PVC cristal
           </p>
         </div>
 

@@ -23,12 +23,7 @@ export interface CategoryItem {
 }
 
 export const DEFAULT_CATEGORIES: CategoryItem[] = [
-  { id: "almohadon", label: "Almohadones" },
-  { id: "poster", label: "Posters" },
-  { id: "taza", label: "Tazas" },
-  { id: "bolso", label: "Bolsos" },
-  { id: "remera", label: "Remeras" },
-  { id: "accesorio", label: "Accesorios" },
+  { id: "mochilas-y-bolsos", label: "Mochilas y Bolsos" },
 ]
 
 export interface StoreSettings {
@@ -87,12 +82,12 @@ export interface EmailRecord {
 }
 
 const ORDERS_KEY = "acid_blue_orders_v1"
-const PRODUCTS_KEY = "acid_blue_custom_products_v1"
-const MODIFIED_PRODUCTS_KEY = "acid_blue_modified_products_v1"
-const DELETED_PRODUCTS_KEY = "acid_blue_deleted_products_v1"
+const PRODUCTS_KEY = "acid_blue_custom_products_v2"
+const MODIFIED_PRODUCTS_KEY = "acid_blue_modified_products_v2"
+const DELETED_PRODUCTS_KEY = "acid_blue_deleted_products_v2"
 const EMAILS_KEY = "acid_blue_emails_v1"
 const AUTH_KEY = "acid_blue_admin_auth_v1"
-const SETTINGS_KEY = "acid_blue_settings_v1"
+const SETTINGS_KEY = "acid_blue_settings_v2"
 
 // Initial sample orders so the admin view isn't empty upon first opening
 const SAMPLE_ORDERS: Order[] = [
@@ -108,25 +103,17 @@ const SAMPLE_ORDERS: Order[] = [
     },
     items: [
       {
-        id: "almohadon-azul-electrico",
-        name: "Almohadón Azul Eléctrico",
-        description: "Retrato ilustrado en tonos cian · 40x40",
-        price: 12900,
-        quantity: 2,
-        image: "/images/acid/cushion-blue-portrait.png",
-      },
-      {
-        id: "taza-acid",
-        name: "Taza Acid",
-        description: "Mármol líquido en negro · 350ml",
-        price: 8900,
+        id: "bandolera-chica-transparente",
+        name: "Bandolera Chica Transparente",
+        description: "PVC cristal con estampa BTS · Chica",
+        price: 25000,
         quantity: 1,
-        image: "/images/acid/mug-acid.png",
+        image: "/images/products/bandolera-chica-1.jpg",
       },
     ],
-    subtotal: 34700,
+    subtotal: 25000,
     shipping: 0,
-    total: 34700,
+    total: 25000,
     status: "en_preparacion",
     createdAt: "2026-10-07T18:45:00.000Z",
   },
@@ -141,17 +128,17 @@ const SAMPLE_ORDERS: Order[] = [
     },
     items: [
       {
-        id: "poster-sonrisa-acida",
-        name: "Poster Sonrisa Ácida",
-        description: "Diseño tipográfico experimental · 50x70",
-        price: 15400,
+        id: "mochila-negra-transparente",
+        name: "Mochila Negra Transparente",
+        description: "PVC cristal con ribetes negros · Estándar",
+        price: 25000,
         quantity: 1,
-        image: "/images/acid/poster-abstract.png",
+        image: "/images/products/mochila-negra-1.jpg",
       },
     ],
-    subtotal: 15400,
+    subtotal: 25000,
     shipping: 0,
-    total: 15400,
+    total: 25000,
     status: "pendiente",
     createdAt: "2026-10-08T14:20:00.000Z",
   },
