@@ -1515,36 +1515,6 @@ Total: ${formatARS(order.total)}`
                 </div>
               </div>
 
-              {/* Card 3: Banner de Aviso Superior */}
-              <div className="bg-card border border-border rounded-3xl p-6 lg:p-8 boty-shadow space-y-4">
-                <div className="flex items-center gap-3">
-                  <span className="w-10 h-10 rounded-2xl bg-primary/10 border border-primary/20 flex items-center justify-center text-primary">
-                    <Sparkles className="w-5 h-5" />
-                  </span>
-                  <div>
-                    <h3 className="font-serif text-lg font-bold text-foreground">
-                      Barra de Anuncio Superior
-                    </h3>
-                    <p className="text-xs text-muted-foreground">
-                      Aviso visible en la parte superior de la tienda para destacar la compra mínima o promociones.
-                    </p>
-                  </div>
-                </div>
-
-                <div>
-                  <input
-                    type="text"
-                    value={bannerNoticeInput}
-                    onChange={(e) => setBannerNoticeInput(e.target.value)}
-                    placeholder={`Compra mínima: ${formatARS(parseInt(minAmountInput) || 15000)} · Envíos a todo el país`}
-                    className="w-full bg-background border border-border rounded-xl px-4 py-3 text-foreground text-sm focus:outline-none focus:border-primary boty-transition"
-                  />
-                  <p className="text-[11px] text-muted-foreground mt-1.5">
-                    Dejalo en blanco para usar el texto automático generado a partir de la compra mínima.
-                  </p>
-                </div>
-              </div>
-
               {/* Submit Button */}
               <div className="flex items-center justify-end gap-4 pt-2">
                 <button

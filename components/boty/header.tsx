@@ -6,40 +6,19 @@ import Image from "next/image"
 import { Menu, X, ShoppingBag, Search, User } from "lucide-react"
 import { CartDrawer } from "./cart-drawer"
 import { useCart } from "./cart-context"
-import { getStoreSettings, DEFAULT_SETTINGS } from "@/lib/store"
-import { formatARS } from "@/lib/products"
 
 export function Header() {
   const [isMenuOpen, setIsMenuOpen] = useState(false)
   const [isMounted, setIsMounted] = useState(false)
-  const [settings, setSettings] = useState(DEFAULT_SETTINGS)
   const { setIsOpen, itemCount } = useCart()
 
   // Only show cart count after mount (avoids hydration mismatch)
   useEffect(() => {
     setIsMounted(true)
-    const sync = () => setSettings(getStoreSettings())
-    sync()
-    window.addEventListener("acid_store_updated", sync)
-    return () => window.removeEventListener("acid_store_updated", sync)
   }, [])
 
   return (
-    <header className="fixed top-0 left-0 right-0 z-50 px-4 pt-2.5">
-      {/* Top Announcement Bar */}
-      {settings.minPurchaseAmount > 0 && (
-        <div className="max-w-7xl mx-auto mb-2 px-4 py-1 text-center text-[11px] sm:text-xs tracking-wider bg-background/90 text-foreground/90 border border-primary/30 rounded-full flex items-center justify-center gap-2 backdrop-blur-md shadow-md animate-fade-in font-medium">
-          <span className="text-primary font-bold">✦</span>
-          <span>
-            Compra mínima: <strong className="text-primary font-bold">{formatARS(settings.minPurchaseAmount)}</strong>
-          </span>
-          <span className="hidden sm:inline text-muted-foreground">·</span>
-          <span className="hidden sm:inline text-muted-foreground">
-            Diseños personalizados: demora de <strong className="text-foreground">{settings.customLeadTimeDays}</strong>
-          </span>
-          <span className="text-primary font-bold">✦</span>
-        </div>
-      )}
+    <header className="fixed top-0 left-0 right-0 z-50 px-4 pt-4">
       <nav
         className="max-w-7xl mx-auto px-6 lg:px-8 backdrop-blur-md rounded-2xl py-0 my-0 animate-scale-fade-in bg-[rgba(18,22,31,0.7)] border border-[rgba(47,212,230,0.14)]"
         style={{ boxShadow: 'rgba(0, 0, 0, 0.4) 0px 10px 40px' }}
