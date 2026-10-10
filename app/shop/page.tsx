@@ -39,6 +39,15 @@ export default function ShopPage() {
     syncProducts()
     syncStoreWithCloud()
     window.addEventListener("acid_store_updated", syncProducts)
+
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search)
+      const catParam = params.get("category") || params.get("cat")
+      if (catParam) {
+        setSelectedCategory(catParam)
+      }
+    }
+
     return () => window.removeEventListener("acid_store_updated", syncProducts)
   }, [])
 

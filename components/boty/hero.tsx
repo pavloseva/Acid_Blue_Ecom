@@ -47,7 +47,7 @@ export function Hero() {
                 className="text-base sm:text-lg leading-relaxed mb-10 max-w-md mx-auto lg:mx-0 text-muted-foreground animate-blur-in opacity-0"
                 style={{ animationDelay: '0.8s', animationFillMode: 'forwards' }}
               >
-                Almohadones, bolsos y accesorios con personalidad. Diseños únicos hechos para alegrar tu día a día con la mejor calidad DTF & Sublimación.
+                Mochilas, bandoleras y accesorios en PVC cristal de alta resistencia. Diseños funcionales y cancheros pensados para recitales, eventos y tu día a día.
               </p>
               <div
                 className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start animate-blur-in opacity-0"
@@ -77,7 +77,7 @@ export function Hero() {
                 <div className="relative aspect-square rounded-[calc(2rem-3px)] overflow-hidden bg-card">
                   <Image
                     src="/images/acid/hero-cushions.png"
-                    alt="Almohadones Acid Blue con estampas de arte"
+                    alt="Mochilas y bandoleras transparentes Acid Blue"
                     fill
                     priority
                     className="object-cover"
