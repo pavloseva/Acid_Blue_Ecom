@@ -27,7 +27,7 @@ export function Hero() {
                 className="font-script text-3xl sm:text-4xl text-accent mb-2 animate-blur-in opacity-0"
                 style={{ animationDelay: '0.3s', animationFillMode: 'forwards' }}
               >
-                Cute things, big vibes ✦
+                Cosas lindas, buena vibra ✦
               </div>
               <h1 className="font-sans text-4xl sm:text-5xl md:text-6xl xl:text-7xl font-bold tracking-tight leading-[1.08] mb-6 text-balance text-foreground">
                 <span
@@ -61,7 +61,7 @@ export function Hero() {
                   <ArrowRight className="w-4 h-4 group-hover:translate-x-1 boty-transition" />
                 </Link>
                 <Link
-                  href="/#nosotros"
+                  href="/#envios"
                   className="inline-flex items-center justify-center gap-2 border border-border text-foreground px-8 py-4 rounded-full text-sm tracking-wide boty-transition hover:border-primary/50 hover:text-primary"
                 >
                   Cómo comprar

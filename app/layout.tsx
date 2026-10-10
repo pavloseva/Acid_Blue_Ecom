@@ -20,7 +20,7 @@ const lakesight = localFont({
 });
 
 export const metadata: Metadata = {
-  title: 'Acid Blue — Cute things, big vibes',
+  title: 'Acid Blue — Cosas lindas, buena vibra',
   description: 'Almohadones, bolsos y accesorios con personalidad. DTF & Sublimación desde Córdoba Capital.',
   generator: 'v0.app',
   keywords: ['almohadones', 'bolsos', 'accesorios', 'DTF', 'sublimacion', 'arte impreso', 'kpop', 'Córdoba', 'Argentina', 'Acid Blue'],

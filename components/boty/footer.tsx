@@ -13,17 +13,16 @@ const footerLinks = {
     { name: "Regalos", href: "/shop" }
   ],
   about: [
-    { name: "Nuestra Historia", href: "/" },
-    { name: "Envios", href: "/" },
-    { name: "Diseños", href: "/" },
-    { name: "Contacto", href: "/" }
+    { name: "Cómo Comprar", href: "/#envios" },
+    { name: "Envíos a todo el país", href: "/#envios" },
+    { name: "Catálogo completo", href: "/shop" },
+    { name: "Atención al cliente", href: "/#envios" }
   ],
   support: [
-    { name: "Consultas", href: "/" },
-    { name: "Preguntas", href: "/" },
-    { name: "Envío", href: "/" },
-    { name: "Devoluciones", href: "/" },
-    { name: "Panel Admin", href: "/admin" }
+    { name: "Preguntas Frecuentes", href: "/#envios" },
+    { name: "Medios de Pago", href: "/#envios" },
+    { name: "Garantía de Compra", href: "/#envios" },
+    { name: "Panel Administrador", href: "/admin" }
   ]
 }
 
@@ -51,13 +50,13 @@ export function Footer() {
               />
             </Link>
             <p className="font-script text-2xl text-primary mb-1">
-              Cute things, big vibes
+              Cosas lindas, buena vibra
             </p>
             <p className="text-[11px] uppercase tracking-wider text-accent/80 font-medium mb-3">
-              Pillows • Bags • Accessories — DTF & Sublimation
+              Almohadones • Bolsos • Accesorios — DTF & Sublimación
             </p>
             <p className="text-sm text-muted-foreground leading-relaxed mb-6">
-              Functional things, with personality. Made to brighten your everyday. Cute, comfy & always a little extra.
+              Cosas funcionales con personalidad. Hechas para alegrar tu día a día. Lindas, cómodas y con un toque único.
             </p>
             <div className="flex gap-4">
               <a
@@ -92,7 +91,7 @@ export function Footer() {
 
           {/* Shop Links */}
           <div>
-            <h3 className="font-medium text-foreground mb-4">Shop</h3>
+            <h3 className="font-medium text-foreground mb-4">Tienda</h3>
             <ul className="space-y-3">
               {footerLinks.shop.map((link) => (
                 <li key={link.name}>
@@ -109,7 +108,7 @@ export function Footer() {
 
           {/* About Links */}
           <div>
-            <h3 className="font-medium text-foreground mb-4">About</h3>
+            <h3 className="font-medium text-foreground mb-4">Información</h3>
             <ul className="space-y-3">
               {footerLinks.about.map((link) => (
                 <li key={link.name}>
@@ -126,7 +125,7 @@ export function Footer() {
 
           {/* Support Links */}
           <div>
-            <h3 className="font-medium text-foreground mb-4">Support</h3>
+            <h3 className="font-medium text-foreground mb-4">Ayuda</h3>
             <ul className="space-y-3">
               {footerLinks.support.map((link) => (
                 <li key={link.name}>
@@ -146,14 +145,14 @@ export function Footer() {
         <div className="pt-10 border-t border-border/50">
           <div className="flex flex-col md:flex-row items-center justify-between gap-4">
             <p className="text-sm text-muted-foreground">
-              © {new Date().getFullYear()} Acid Blue. Derechos reservados.
+              © {new Date().getFullYear()} Acid Blue. Todos los derechos reservados.
             </p>
             <div className="flex gap-6">
               <Link href="/" className="text-sm text-muted-foreground hover:text-foreground boty-transition">
-                Privacy Policy
+                Política de Privacidad
               </Link>
               <Link href="/" className="text-sm text-muted-foreground hover:text-foreground boty-transition">
-                Terms of Service
+                Términos del Servicio
               </Link>
             </div>
           </div>

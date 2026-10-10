@@ -43,12 +43,6 @@ export function Header() {
               Tienda
             </Link>
             <Link
-              href="/#nosotros"
-              className="text-sm tracking-wide text-foreground/70 hover:text-primary boty-transition"
-            >
-              Nosotros
-            </Link>
-            <Link
               href="/#envios"
               className="text-sm tracking-wide text-foreground/70 hover:text-primary boty-transition"
             >
@@ -113,9 +107,6 @@ export function Header() {
           <div className="flex flex-col gap-4 pt-4 border-t border-border/50">
             <Link href="/shop" className="text-sm tracking-wide text-foreground/70 hover:text-primary boty-transition">
               Tienda
-            </Link>
-            <Link href="/#nosotros" className="text-sm tracking-wide text-foreground/70 hover:text-primary boty-transition">
-              Nosotros
             </Link>
             <Link href="/#envios" className="text-sm tracking-wide text-foreground/70 hover:text-primary boty-transition">
               Envíos
