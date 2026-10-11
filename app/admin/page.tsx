@@ -74,7 +74,6 @@ import {
   isAdminAuthenticated,
   adminLogout,
   adminLogin,
-  DEFAULT_ADMIN,
   type Order,
   type OrderStatus,
   type EmailRecord,
@@ -708,7 +707,7 @@ Total: ${formatARS(order.total)}`
                 required
                 value={loginEmail}
                 onChange={(e) => setLoginEmail(e.target.value)}
-                placeholder="admin@acidblue.com"
+                placeholder="Usuario o correo"
                 className="w-full bg-background border border-border rounded-xl px-4 py-3 text-foreground text-sm focus:outline-none focus:border-primary"
               />
             </div>
@@ -728,17 +727,6 @@ Total: ${formatARS(order.total)}`
               className="w-full bg-primary text-primary-foreground font-medium py-3 rounded-xl hover:bg-primary/90 boty-transition text-sm"
             >
               Ingresar
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                setLoginEmail(DEFAULT_ADMIN.email)
-                setLoginPassword(DEFAULT_ADMIN.password)
-                setLoginError("")
-              }}
-              className="w-full py-2 text-xs text-primary/80 hover:text-primary hover:underline text-center"
-            >
-              Autocompletar credenciales de prueba ({DEFAULT_ADMIN.email} / {DEFAULT_ADMIN.password})
             </button>
           </form>
 
