@@ -240,7 +240,7 @@ function ProductCard({
           {/* Quick add button */}
           <button
             type="button"
-            className="absolute bottom-4 right-4 w-12 h-12 rounded-full bg-primary text-primary-foreground flex items-center justify-center opacity-0 translate-y-2 group-hover:opacity-100 group-hover:translate-y-0 boty-transition"
+            className="absolute bottom-3 right-3 sm:bottom-4 sm:right-4 w-12 h-12 rounded-full bg-primary text-primary-foreground flex items-center justify-center opacity-100 sm:opacity-0 sm:translate-y-2 sm:group-hover:opacity-100 sm:group-hover:translate-y-0 shadow-lg boty-transition z-10 active:scale-95"
             onClick={(e) => {
               e.preventDefault()
               e.stopPropagation()
