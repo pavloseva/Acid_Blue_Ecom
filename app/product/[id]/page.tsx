@@ -20,6 +20,7 @@ import {
   Play,
   Film,
   Scan,
+  Clock,
 } from "lucide-react"
 import { Header } from "@/components/boty/header"
 import { Footer } from "@/components/boty/footer"
@@ -40,8 +41,8 @@ type MediaItem = { type: "image"; url: string } | { type: "video"; url: string }
 
 export default function ProductPage() {
   const params = useParams()
-  const productId = params.id as string
-  const baseProd = getProduct(productId)
+  const productId = (typeof params?.id === "string" ? params.id : Array.isArray(params?.id) ? params.id[0] : "") || ""
+  const baseProd = productId ? getProduct(productId) : undefined
   const [product, setProduct] = useState<Product | null>(baseProd || null)
   const [settings, setSettings] = useState(DEFAULT_SETTINGS)
   const [isMounted, setIsMounted] = useState(false)
