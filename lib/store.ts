@@ -214,6 +214,7 @@ export async function saveOrder(newOrderData: {
   subtotal: number
   shipping: number
   total: number
+  paymentMethod?: string
 }): Promise<Order> {
   const currentOrders = getOrders()
   const randomSuffix = Math.floor(1000 + Math.random() * 9000)
@@ -227,6 +228,7 @@ export async function saveOrder(newOrderData: {
     shipping: newOrderData.shipping,
     total: newOrderData.total,
     status: "pendiente",
+    paymentMethod: newOrderData.paymentMethod || "transferencia",
     createdAt: new Date().toISOString(),
   }
 

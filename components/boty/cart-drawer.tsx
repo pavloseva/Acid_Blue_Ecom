@@ -1,6 +1,6 @@
 "use client"
 
-import { Minus, Plus, Trash2, ShoppingBag, CheckCircle, AlertCircle, Clock, X, ChevronLeft, ArrowRight } from "lucide-react"
+import { Minus, Plus, Trash2, ShoppingBag, CheckCircle, AlertCircle, Clock, X, ChevronLeft, ArrowRight, CreditCard, Building2 } from "lucide-react"
 import Image from "next/image"
 import {
   Drawer,
@@ -47,7 +47,9 @@ export function CartDrawer() {
   const [customerEmail, setCustomerEmail] = useState("")
   const [customerAddress, setCustomerAddress] = useState("")
   const [customerPhone, setCustomerPhone] = useState("")
+  const [paymentMethod, setPaymentMethod] = useState<"mercadopago" | "transferencia">("mercadopago")
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [errorMessage, setErrorMessage] = useState("")
 
   const handleCheckout = () => {
     if (isBelowMin) return
@@ -57,28 +59,64 @@ export function CartDrawer() {
   const handleOrderComplete = async () => {
     if (!customerName || !customerEmail || !customerAddress) return
     setIsSubmitting(true)
+    setErrorMessage("")
 
     try {
+      const orderItems = items.map((item) => ({
+        id: item.id,
+        name: item.name,
+        description: item.description,
+        price: item.price,
+        quantity: item.quantity,
+        image: item.image,
+      }))
+
+      const customerData = {
+        name: customerName,
+        email: customerEmail,
+        address: customerAddress,
+        phone: customerPhone,
+      }
+
       const newOrder = await saveOrder({
-        customer: {
-          name: customerName,
-          email: customerEmail,
-          address: customerAddress,
-          phone: customerPhone,
-        },
-        items: items.map((item) => ({
-          id: item.id,
-          name: item.name,
-          description: item.description,
-          price: item.price,
-          quantity: item.quantity,
-          image: item.image,
-        })),
+        customer: customerData,
+        items: orderItems,
         subtotal,
         shipping,
         total,
+        paymentMethod,
       })
 
+      // ========================================================
+      // 1. FLUJO MERCADO PAGO (Checkout Pro Oficial)
+      // ========================================================
+      if (paymentMethod === "mercadopago") {
+        const res = await fetch("/api/mercadopago/create-preference", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            orderId: newOrder.id,
+            items: orderItems,
+            customer: customerData,
+            total,
+          }),
+        })
+
+        const data = await res.json()
+
+        if (!res.ok || !data.checkout_url) {
+          throw new Error(data.error || "No se pudo generar el enlace de pago de Mercado Pago")
+        }
+
+        // Redirigir directamente al Checkout oficial de Mercado Pago
+        clearCart()
+        window.location.href = data.checkout_url
+        return
+      }
+
+      // ========================================================
+      // 2. FLUJO TRANSFERENCIA BANCARIA
+      // ========================================================
       setConfirmedOrderId(newOrder.id)
       setCheckoutOpen(false)
       clearCart()
@@ -89,8 +127,9 @@ export function CartDrawer() {
       setCustomerEmail("")
       setCustomerAddress("")
       setCustomerPhone("")
-    } catch (err) {
+    } catch (err: any) {
       console.error("Error al procesar el pedido:", err)
+      setErrorMessage(err?.message || "Ocurrió un error al procesar el pedido. Por favor intentá nuevamente.")
     } finally {
       setIsSubmitting(false)
     }
@@ -441,6 +480,81 @@ export function CartDrawer() {
                     />
                   </div>
 
+                  {/* Payment Method Selector */}
+                  <div className="space-y-2">
+                    <label className="text-xs font-medium text-foreground block">
+                      Medio de Pago <span className="text-primary">*</span>
+                    </label>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                      {/* Mercado Pago Option */}
+                      <button
+                        type="button"
+                        onClick={() => setPaymentMethod("mercadopago")}
+                        className={`p-3.5 rounded-2xl border text-left flex items-start gap-3 boty-transition ${
+                          paymentMethod === "mercadopago"
+                            ? "bg-primary/10 border-primary text-foreground ring-1 ring-primary/40 shadow-sm"
+                            : "bg-card border-border/80 text-muted-foreground hover:border-border"
+                        }`}
+                      >
+                        <div
+                          className={`w-4 h-4 rounded-full border mt-0.5 flex items-center justify-center flex-shrink-0 ${
+                            paymentMethod === "mercadopago"
+                              ? "border-primary bg-primary"
+                              : "border-muted-foreground/60"
+                          }`}
+                        >
+                          {paymentMethod === "mercadopago" && (
+                            <div className="w-1.5 h-1.5 bg-primary-foreground rounded-full" />
+                          )}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="text-xs font-bold text-foreground flex items-center gap-1.5">
+                            <CreditCard className="w-3.5 h-3.5 text-primary flex-shrink-0" />
+                            Mercado Pago
+                            <span className="text-[10px] bg-cyan-500/20 text-cyan-400 px-1.5 py-0.5 rounded-full font-semibold">
+                              Oficial
+                            </span>
+                          </div>
+                          <p className="text-[11px] text-muted-foreground mt-0.5 leading-tight">
+                            Tarjetas de crédito, débito, dinero en cuenta y cuotas
+                          </p>
+                        </div>
+                      </button>
+
+                      {/* Transferencia Bancaria Option */}
+                      <button
+                        type="button"
+                        onClick={() => setPaymentMethod("transferencia")}
+                        className={`p-3.5 rounded-2xl border text-left flex items-start gap-3 boty-transition ${
+                          paymentMethod === "transferencia"
+                            ? "bg-primary/10 border-primary text-foreground ring-1 ring-primary/40 shadow-sm"
+                            : "bg-card border-border/80 text-muted-foreground hover:border-border"
+                        }`}
+                      >
+                        <div
+                          className={`w-4 h-4 rounded-full border mt-0.5 flex items-center justify-center flex-shrink-0 ${
+                            paymentMethod === "transferencia"
+                              ? "border-primary bg-primary"
+                              : "border-muted-foreground/60"
+                          }`}
+                        >
+                          {paymentMethod === "transferencia" && (
+                            <div className="w-1.5 h-1.5 bg-primary-foreground rounded-full" />
+                          )}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="text-xs font-bold text-foreground flex items-center gap-1.5">
+                            <Building2 className="w-3.5 h-3.5 text-muted-foreground flex-shrink-0" />
+                            Transferencia
+                          </div>
+                          <p className="text-[11px] text-muted-foreground mt-0.5 leading-tight">
+                            CBU / Alias bancario directo sin intermediarios
+                          </p>
+                        </div>
+                      </button>
+                    </div>
+                  </div>
+
                   {/* Lead Time Notice */}
                   <div className="p-3.5 bg-muted/60 border border-border rounded-2xl text-xs text-muted-foreground flex items-start gap-2.5">
                     <Clock className="w-4 h-4 text-primary mt-0.5 flex-shrink-0" />
@@ -449,6 +563,14 @@ export function CartDrawer() {
                       <strong className="text-primary">{settings.customLeadTimeDays}</strong> a partir del pago.
                     </span>
                   </div>
+
+                  {/* Error Alert */}
+                  {errorMessage && (
+                    <div className="p-3 bg-rose-500/10 border border-rose-500/30 rounded-xl text-xs text-rose-400 flex items-center gap-2">
+                      <AlertCircle className="w-4 h-4 flex-shrink-0" />
+                      <span>{errorMessage}</span>
+                    </div>
+                  )}
 
                   {/* Action Buttons */}
                   <div className="pt-2 space-y-2 pb-6">
@@ -460,8 +582,12 @@ export function CartDrawer() {
                       {isSubmitting ? (
                         <>
                           <span className="w-5 h-5 border-2 border-primary-foreground/30 border-t-primary-foreground rounded-full animate-spin" />
-                          Procesando pedido...
+                          {paymentMethod === "mercadopago"
+                            ? "Conectando con Mercado Pago..."
+                            : "Procesando pedido..."}
                         </>
+                      ) : paymentMethod === "mercadopago" ? (
+                        `Pagar con Mercado Pago · ${formatARS(total)}`
                       ) : (
                         `Confirmar pedido · ${formatARS(total)}`
                       )}
