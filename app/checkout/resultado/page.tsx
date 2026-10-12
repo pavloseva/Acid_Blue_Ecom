@@ -1,6 +1,6 @@
 "use client"
 
-import { Suspense, useEffect, useState } from "react"
+import { Suspense, useEffect, useRef } from "react"
 import { useSearchParams } from "next/navigation"
 import Link from "next/link"
 import { CheckCircle2, Clock, XCircle, ArrowRight, ShoppingBag, ShieldCheck, Check } from "lucide-react"
@@ -21,40 +21,29 @@ function ResultadoContent() {
   const isPending = statusParam === "pending" || statusParam === "in_process"
   const isFailure = statusParam === "failure" || statusParam === "rejected"
 
-  const [isUpdating, setIsUpdating] = useState(false)
-  const [orderConfirmed, setOrderConfirmed] = useState(false)
+  // Strict one-shot guard to prevent any re-render infinite loops
+  const hasExecutedRef = useRef(false)
 
-  // When payment is approved, clear cart and immediately update order status in Supabase
   useEffect(() => {
-    if (isApproved) {
-      clearCart()
+    if (!isApproved || !orderId || hasExecutedRef.current) return
+    hasExecutedRef.current = true
 
-      if (orderId) {
-        setIsUpdating(true)
-        fetch("/api/mercadopago/confirm-order", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            orderId,
-            paymentId,
-            status: "approved",
-          }),
-        })
-          .then((res) => res.json())
-          .then((data) => {
-            if (data.success) {
-              setOrderConfirmed(true)
-              try {
-                // Notify any open admin or storefront tabs
-                window.dispatchEvent(new CustomEvent("acid_store_updated"))
-              } catch {}
-            }
-          })
-          .catch((err) => console.error("Error al actualizar estado del pedido:", err))
-          .finally(() => setIsUpdating(false))
-      }
-    }
-  }, [isApproved, orderId, paymentId, clearCart])
+    try {
+      clearCart()
+    } catch {}
+
+    fetch("/api/mercadopago/confirm-order", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        orderId,
+        paymentId,
+        status: "approved",
+      }),
+    })
+      .then((res) => res.json())
+      .catch((err) => console.error("Error al confirmar pedido:", err))
+  }, [isApproved, orderId, paymentId])
 
   return (
     <div className="max-w-xl mx-auto px-6 py-20 text-center">

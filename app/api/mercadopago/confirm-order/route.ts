@@ -16,13 +16,38 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "orderId requerido" }, { status: 400 })
     }
 
+    // 1. Fetch current order from Supabase
+    const checkRes = await fetch(
+      `${SUPABASE_URL}/rest/v1/orders?id=eq.${encodeURIComponent(orderId)}&select=*`,
+      {
+        headers: {
+          apikey: SERVICE_KEY,
+          Authorization: `Bearer ${SERVICE_KEY}`,
+        },
+      }
+    )
+
+    const existingRows = await checkRes.json()
+    const order = Array.isArray(existingRows) && existingRows.length > 0 ? existingRows[0] : null
+
+    // STRICT PROTECTION: If order is ALREADY en_preparacion, DO NOT SEND EMAIL OR UPDATE AGAIN!
+    if (order && order.status === "en_preparacion") {
+      console.log(`[CONFIRM ORDER] Pedido #${orderId} ya estaba confirmado. Omitiendo reenvío de correo.`)
+      return NextResponse.json({
+        success: true,
+        orderId,
+        status: "en_preparacion",
+        alreadyProcessed: true,
+      })
+    }
+
     const isApproved = status === "approved"
     const newStatus = isApproved ? "en_preparacion" : status === "pending" ? "pendiente" : "cancelado"
     const paymentMethodLabel = paymentId
       ? `Mercado Pago (Operación #${paymentId})`
       : "Mercado Pago"
 
-    // Update in Supabase orders table
+    // 2. Update order in Supabase
     const updateRes = await fetch(
       `${SUPABASE_URL}/rest/v1/orders?id=eq.${encodeURIComponent(orderId)}`,
       {
@@ -46,12 +71,12 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Error al actualizar en base de datos", details: errText }, { status: 500 })
     }
 
-    const updatedRows = await updateRes.json()
-    const order = Array.isArray(updatedRows) ? updatedRows[0] : null
-
-    // Send customer confirmation email with the official Mercado Pago Operation Code!
+    // 3. Send customer confirmation email ONCE
     let emailSent = false
-    if (isApproved && order?.customer_email) {
+    const customerEmail = order?.customer_email || order?.customer?.email
+    const customerName = order?.customer_name || order?.customer?.name || "Cliente"
+
+    if (isApproved && customerEmail) {
       try {
         const itemsList = Array.isArray(order.items)
           ? order.items
@@ -59,7 +84,7 @@ export async function POST(req: Request) {
               .join("\n")
           : ""
 
-        const emailBody = `¡Hola ${order.customer_name || "Cliente"}!
+        const emailBody = `¡Hola ${customerName}!
 
 ¡Tu pago fue acreditado con éxito en Mercado Pago! Tu pedido #${orderId} ya está confirmado y en preparación en nuestro taller de diseño.
 
@@ -77,7 +102,7 @@ ${itemsList}
 Total Abonado: $${Number(order.total || 0).toLocaleString("es-AR")}
 
 DATOS DE ENTREGA:
-Destinatario: ${order.customer_name || "Cliente"}
+Destinatario: ${customerName}
 Dirección: ${order.customer_address || "A coordinar"}
 Teléfono: ${order.customer_phone || "No especificado"}
 
@@ -90,7 +115,7 @@ Si tenés alguna consulta, podés responder directamente a este correo o escribi
 Equipo Acid Blue`
 
         const emailResult = await sendEmailNotification({
-          to: order.customer_email,
+          to: customerEmail,
           subject: `Confirmación de pedido #${orderId} (Operación MP #${paymentId || ""}) · Acid Blue`,
           body: emailBody,
           type: "order",
