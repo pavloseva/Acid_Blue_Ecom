@@ -256,14 +256,16 @@ export async function saveOrder(newOrderData: {
   return newOrder
 }
 
-export function updateOrderStatus(orderId: string, status: OrderStatus): void {
+export function updateOrderStatus(orderId: string, status: OrderStatus, paymentMethod?: string): void {
   const orders = getOrders()
-  const updated = orders.map((o) => (o.id === orderId ? { ...o, status } : o))
+  const updated = orders.map((o) =>
+    o.id === orderId ? { ...o, status, ...(paymentMethod ? { paymentMethod } : {}) } : o
+  )
   if (isClient()) {
     localStorage.setItem(ORDERS_KEY, JSON.stringify(updated))
     notifyStoreChange()
   }
-  updateOrderStatusInCloud(orderId, status).catch((err) =>
+  updateOrderStatusInCloud(orderId, status, paymentMethod).catch((err) =>
     console.warn("Error updating order in Supabase:", err)
   )
 }

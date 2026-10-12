@@ -285,14 +285,22 @@ export async function saveOrderToCloud(order: Order): Promise<boolean> {
   }
 }
 
-export async function updateOrderStatusInCloud(id: string, status: OrderStatus): Promise<boolean> {
+export async function updateOrderStatusInCloud(
+  id: string,
+  status: OrderStatus,
+  paymentMethod?: string
+): Promise<boolean> {
   try {
+    const body: Record<string, any> = { status }
+    if (paymentMethod) {
+      body.payment_method = paymentMethod
+    }
     const res = await fetch(`${SUPABASE_URL}/rest/v1/orders?id=eq.${encodeURIComponent(id)}`, {
       method: "PATCH",
       headers: getHeaders({
         "Content-Type": "application/json",
       }),
-      body: JSON.stringify({ status }),
+      body: JSON.stringify(body),
     })
     return res.ok
   } catch (err) {

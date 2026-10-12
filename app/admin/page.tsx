@@ -1093,14 +1093,32 @@ Total: ${formatARS(order.total)}`
                       className="bg-card border border-border hover:border-primary/40 rounded-2xl p-5 lg:p-6 boty-shadow boty-transition"
                     >
                       <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pb-4 border-b border-border/60">
-                        {/* Order ID & Date */}
-                        <div className="flex items-center gap-3">
+                        {/* Order ID, Date & Payment Method */}
+                        <div className="flex flex-wrap items-center gap-2.5">
                           <span className="font-mono text-sm font-bold text-primary px-3 py-1 rounded-lg bg-primary/10 border border-primary/20">
                             {order.id}
                           </span>
                           <span className="text-xs text-muted-foreground">
                             {formattedDate}
                           </span>
+                          {order.paymentMethod && (
+                            <span
+                              className={`inline-flex items-center gap-1.5 text-xs font-mono px-2.5 py-0.5 rounded-full border ${
+                                order.paymentMethod.toLowerCase().includes("mercado")
+                                  ? "bg-cyan-500/10 text-cyan-400 border-cyan-500/25"
+                                  : "bg-muted text-muted-foreground border-border"
+                              }`}
+                            >
+                              <span
+                                className={`w-1.5 h-1.5 rounded-full ${
+                                  order.paymentMethod.toLowerCase().includes("mercado")
+                                    ? "bg-cyan-400"
+                                    : "bg-muted-foreground"
+                                }`}
+                              />
+                              {order.paymentMethod}
+                            </span>
+                          )}
                         </div>
 
                         {/* Status selector */}

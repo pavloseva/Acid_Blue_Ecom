@@ -62,10 +62,12 @@ export async function POST(req: Request) {
     })
 
     // Back URLs for customer redirect after payment
+    // IMPORTANT: Mercado Pago requires clean URLs without query parameters.
+    // Mercado Pago automatically appends: collection_id, collection_status, payment_id, status, external_reference, etc.
     const backUrls = {
-      success: `${origin}/checkout/resultado?status=approved&order_id=${encodeURIComponent(orderId || "")}`,
-      failure: `${origin}/checkout/resultado?status=failure&order_id=${encodeURIComponent(orderId || "")}`,
-      pending: `${origin}/checkout/resultado?status=pending&order_id=${encodeURIComponent(orderId || "")}`,
+      success: `${origin}/checkout/resultado`,
+      failure: `${origin}/checkout/resultado`,
+      pending: `${origin}/checkout/resultado`,
     }
 
     const preferencePayload: Record<string, any> = {
