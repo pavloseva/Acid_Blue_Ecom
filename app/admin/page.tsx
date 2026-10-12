@@ -183,6 +183,7 @@ export default function AdminDashboardPage() {
   const [minAmountInput, setMinAmountInput] = useState<string>("15000")
   const [leadTimeInput, setLeadTimeInput] = useState<string>("4 a 5 días hábiles desde el pago")
   const [bannerNoticeInput, setBannerNoticeInput] = useState<string>("")
+  const [freeShippingThresholdInput, setFreeShippingThresholdInput] = useState<string>("")
   const [isSavingSettings, setIsSavingSettings] = useState(false)
   const [settingsSavedSuccess, setSettingsSavedSuccess] = useState(false)
 
@@ -229,6 +230,7 @@ export default function AdminDashboardPage() {
     setMinAmountInput(curSettings.minPurchaseAmount.toString())
     setLeadTimeInput(curSettings.customLeadTimeDays)
     setBannerNoticeInput(curSettings.bannerNotice || "")
+    setFreeShippingThresholdInput(curSettings.freeShippingThreshold ? curSettings.freeShippingThreshold.toString() : "")
   }
 
   const refreshFromCloud = async () => {
@@ -300,10 +302,12 @@ export default function AdminDashboardPage() {
     setIsSavingSettings(true)
     setSettingsSavedSuccess(false)
     const amount = parseInt(minAmountInput.replace(/[^0-9]/g, ""), 10) || 0
+    const freeShippingVal = freeShippingThresholdInput.trim() ? parseInt(freeShippingThresholdInput.replace(/[^0-9]/g, ""), 10) : null
     const updated = await saveStoreSettings({
       minPurchaseAmount: amount,
       customLeadTimeDays: leadTimeInput.trim() || "4 a 5 días hábiles desde el pago",
       bannerNotice: bannerNoticeInput.trim() || (amount > 0 ? `Compra mínima: ${formatARS(amount)} · Envíos a todo el país` : ""),
+      freeShippingThreshold: freeShippingVal && freeShippingVal > 0 ? freeShippingVal : null,
     })
     setStoreSettings(updated)
     setIsSavingSettings(false)
@@ -542,7 +546,7 @@ Total: ${formatARS(order.total)}`
       details: "Estampa de alta durabilidad. Diseñado en Córdoba.",
       care: "Lavar a mano o en ciclo suave.",
       material: "Materiales premium seleccionados.",
-      delivery: "Envíos a todo el país en 24/48 hs hábiles.",
+      delivery: "Confección: 4 a 5 días hábiles. El envío es a cargo del cliente y se coordina con la tienda (o retiro en Córdoba Capital).",
     }
 
     if (editingProductId) {
@@ -1274,7 +1278,7 @@ Total: ${formatARS(order.total)}`
                           {/* Total row */}
                           <div className="flex items-center justify-between pt-3 border-t border-border/40 text-sm">
                             <span className="text-xs text-muted-foreground">
-                              Envío: {order.shipping === 0 ? "Gratis" : formatARS(order.shipping || 0)}
+                              Envío: {order.shipping > 0 ? formatARS(order.shipping) : "A coordinar con cliente"}
                             </span>
                             <div className="flex items-center gap-2">
                               <span className="text-muted-foreground text-xs uppercase font-medium">
@@ -1796,8 +1800,7 @@ Total: ${formatARS(order.total)}`
                       "4 a 5 días hábiles desde el pago",
                       "3 a 5 días hábiles desde el pago",
                       "5 a 7 días hábiles desde el pago",
-                      "24 a 48 hs hábiles desde el pago",
-                      "A coordinar por WhatsApp",
+                      "A coordinar con la tienda",
                     ].map((preset) => (
                       <button
                         key={preset}
@@ -1810,6 +1813,84 @@ Total: ${formatARS(order.total)}`
                         }`}
                       >
                         {preset}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              {/* Card 3: Envío Gratis por Monto (Configurable) */}
+              <div className="bg-card border border-border rounded-3xl p-6 lg:p-8 boty-shadow space-y-5">
+                <div className="flex items-start justify-between gap-4">
+                  <div className="flex items-center gap-3">
+                    <span className="w-10 h-10 rounded-2xl bg-primary/10 border border-primary/20 flex items-center justify-center text-primary">
+                      <Truck className="w-5 h-5" />
+                    </span>
+                    <div>
+                      <h3 className="font-serif text-lg font-bold text-foreground">
+                        Envío Gratis por Monto (Opcional)
+                      </h3>
+                      <p className="text-xs text-muted-foreground">
+                        Por defecto, el envío es siempre a cargo del cliente y se coordina con la tienda. Podés activar envío gratis para compras que superen este monto.
+                      </p>
+                    </div>
+                  </div>
+                  <span className={`text-xs font-mono font-bold px-3 py-1 rounded-full border ${
+                    storeSettings.freeShippingThreshold && storeSettings.freeShippingThreshold > 0
+                      ? "text-emerald-400 bg-emerald-500/10 border-emerald-500/20"
+                      : "text-muted-foreground bg-muted border-border"
+                  }`}>
+                    {storeSettings.freeShippingThreshold && storeSettings.freeShippingThreshold > 0
+                      ? `Activo: > ${formatARS(storeSettings.freeShippingThreshold)}`
+                      : "A cargo del cliente"}
+                  </span>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-foreground uppercase tracking-wider mb-2">
+                    Monto Mínimo para Envío Gratis ($ARS)
+                  </label>
+                  <div className="relative max-w-xs">
+                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground font-semibold">
+                      $
+                    </span>
+                    <input
+                      type="number"
+                      min="0"
+                      step="5000"
+                      value={freeShippingThresholdInput}
+                      onChange={(e) => setFreeShippingThresholdInput(e.target.value)}
+                      placeholder="0 o vacío (desactivado)"
+                      className="w-full bg-background border border-border rounded-xl pl-8 pr-4 py-3 text-foreground font-semibold text-base focus:outline-none focus:border-primary boty-transition"
+                    />
+                  </div>
+                  <p className="text-[11px] text-muted-foreground mt-1.5">
+                    Dejá este campo vacío o en <strong>0</strong> para que el envío sea siempre a cargo del comprador (a coordinar tras la compra).
+                  </p>
+                </div>
+
+                {/* Quick Presets */}
+                <div>
+                  <span className="block text-xs text-muted-foreground mb-2">Valores sugeridos:</span>
+                  <div className="flex flex-wrap gap-2">
+                    {[
+                      { label: "Desactivado (A cargo del cliente)", val: "" },
+                      { label: "$30.000", val: "30000" },
+                      { label: "$50.000", val: "50000" },
+                      { label: "$70.000", val: "70000" },
+                      { label: "$100.000", val: "100000" },
+                    ].map((preset) => (
+                      <button
+                        key={preset.label}
+                        type="button"
+                        onClick={() => setFreeShippingThresholdInput(preset.val)}
+                        className={`text-xs px-3 py-1.5 rounded-full border boty-transition ${
+                          freeShippingThresholdInput === preset.val
+                            ? "bg-primary text-primary-foreground border-primary font-medium"
+                            : "bg-background border-border text-muted-foreground hover:text-foreground"
+                        }`}
+                      >
+                        {preset.label}
                       </button>
                     ))}
                   </div>

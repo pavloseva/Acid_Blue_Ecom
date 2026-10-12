@@ -1,6 +1,6 @@
 "use client"
 
-import { Minus, Plus, Trash2, ShoppingBag, CheckCircle, AlertCircle, Clock, X, ChevronLeft, ArrowRight, CreditCard, Building2 } from "lucide-react"
+import { Minus, Plus, Trash2, ShoppingBag, CheckCircle, AlertCircle, Clock, Truck, X, ChevronLeft, ArrowRight, CreditCard, Building2 } from "lucide-react"
 import Image from "next/image"
 import {
   Drawer,
@@ -35,6 +35,10 @@ export function CartDrawer() {
 
   const isBelowMin = settings.minPurchaseAmount > 0 && subtotal < settings.minPurchaseAmount
   const remainingForMin = isBelowMin ? settings.minPurchaseAmount - subtotal : 0
+
+  const hasFreeShippingConfig = typeof settings.freeShippingThreshold === "number" && settings.freeShippingThreshold > 0
+  const isFreeShipping = hasFreeShippingConfig && subtotal >= (settings.freeShippingThreshold || 0)
+  const remainingForFreeShipping = hasFreeShippingConfig && !isFreeShipping ? (settings.freeShippingThreshold! - subtotal) : 0
 
   const shipping = 0
   const total = subtotal + shipping
@@ -268,48 +272,49 @@ export function CartDrawer() {
                       <span>Subtotal</span>
                       <span>{formatARS(subtotal)}</span>
                     </div>
-                    <div className="flex justify-between text-muted-foreground text-xs sm:text-sm">
+                    <div className="flex justify-between text-muted-foreground text-xs sm:text-sm items-center">
                       <span>Envío</span>
-                      <span className="text-emerald-400 font-medium">
-                        {shipping === 0 ? "Gratis a todo el país" : formatARS(shipping)}
+                      <span className={`text-xs font-medium ${isFreeShipping ? "text-emerald-400 font-semibold" : "text-amber-400/90 text-right"}`}>
+                        {isFreeShipping ? "Gratis" : "A coordinar con la tienda"}
                       </span>
                     </div>
+                    {!isFreeShipping && (
+                      <div className="text-[11px] text-muted-foreground/80 text-right">
+                        (A cargo del cliente)
+                      </div>
+                    )}
+                    {hasFreeShippingConfig && !isFreeShipping && (
+                      <div className="text-[11px] text-emerald-400/80 text-right">
+                        Envío gratis a partir de {formatARS(settings.freeShippingThreshold!)} (faltan {formatARS(remainingForFreeShipping)})
+                      </div>
+                    )}
                     <div className="flex justify-between text-base font-bold text-foreground pt-2 border-t border-border/50">
                       <span>Total</span>
                       <span>{formatARS(total)}</span>
                     </div>
                   </div>
 
-                  {/* Minimum Purchase Progress / Alert */}
-                  {settings.minPurchaseAmount > 0 && (
-                    <div>
-                      {isBelowMin ? (
-                        <div className="bg-amber-500/10 border border-amber-500/25 rounded-xl p-3 space-y-1.5">
-                          <div className="flex items-center justify-between text-xs font-semibold text-amber-400">
-                            <span className="flex items-center gap-1.5">
-                              <AlertCircle className="w-3.5 h-3.5 flex-shrink-0" />
-                              Compra mínima: {formatARS(settings.minPurchaseAmount)}
-                            </span>
-                            <span>Faltan {formatARS(remainingForMin)}</span>
-                          </div>
-                          <div className="w-full bg-background/50 h-1.5 rounded-full overflow-hidden">
-                            <div
-                              className="bg-amber-400 h-full rounded-full transition-all duration-300"
-                              style={{
-                                width: `${Math.min(100, Math.round((subtotal / settings.minPurchaseAmount) * 100))}%`,
-                              }}
-                            />
-                          </div>
-                          <p className="text-[11px] text-muted-foreground">
-                            Agregá más productos para alcanzar el mínimo y completar tu compra.
-                          </p>
-                        </div>
-                      ) : (
-                        <div className="bg-emerald-500/10 border border-emerald-500/25 rounded-xl px-3 py-1.5 text-xs text-emerald-400 flex items-center gap-1.5">
-                          <CheckCircle className="w-3.5 h-3.5 flex-shrink-0" />
-                          <span>¡Superaste la compra mínima requerida!</span>
-                        </div>
-                      )}
+                  {/* Minimum Purchase Progress / Alert (only shown when below minimum) */}
+                  {settings.minPurchaseAmount > 0 && isBelowMin && (
+                    <div className="bg-amber-500/10 border border-amber-500/25 rounded-xl p-3 space-y-1.5">
+                      <div className="flex items-center justify-between text-xs font-semibold text-amber-400">
+                        <span className="flex items-center gap-1.5">
+                          <AlertCircle className="w-3.5 h-3.5 flex-shrink-0" />
+                          Compra mínima: {formatARS(settings.minPurchaseAmount)}
+                        </span>
+                        <span>Faltan {formatARS(remainingForMin)}</span>
+                      </div>
+                      <div className="w-full bg-background/50 h-1.5 rounded-full overflow-hidden">
+                        <div
+                          className="bg-amber-400 h-full rounded-full transition-all duration-300"
+                          style={{
+                            width: `${Math.min(100, Math.round((subtotal / settings.minPurchaseAmount) * 100))}%`,
+                          }}
+                        />
+                      </div>
+                      <p className="text-[11px] text-muted-foreground">
+                        Agregá más productos para alcanzar el mínimo y completar tu compra.
+                      </p>
                     </div>
                   )}
 
@@ -401,9 +406,11 @@ export function CartDrawer() {
                         </span>
                       </div>
                     ))}
-                    <div className="flex justify-between pt-1 text-emerald-400 font-medium">
-                      <span>Envío a domicilio</span>
-                      <span>Gratis</span>
+                    <div className="flex justify-between pt-1 font-medium text-xs items-center">
+                      <span>Envío</span>
+                      <span className={isFreeShipping ? "text-emerald-400 font-semibold" : "text-amber-400/90 text-right"}>
+                        {isFreeShipping ? "Gratis" : "A coordinar con la tienda (a cargo del cliente)"}
+                      </span>
                     </div>
                   </div>
                 </div>
@@ -418,10 +425,12 @@ export function CartDrawer() {
                 >
                   <div>
                     <h3 className="font-serif text-lg text-foreground font-semibold">
-                      Datos para el envío
+                      Datos para la entrega
                     </h3>
                     <p className="text-xs text-muted-foreground mt-0.5">
-                      Ingresá tus datos para que coordinemos la entrega de tu pedido
+                      {isFreeShipping
+                        ? "Ingresá tus datos para que coordinemos el despacho gratuito de tu pedido."
+                        : "Ingresá tus datos para la entrega. El costo y despacho del envío es a cargo del comprador y se acuerda directamente con la tienda tras la compra."}
                     </p>
                   </div>
 
@@ -555,13 +564,24 @@ export function CartDrawer() {
                     </div>
                   </div>
 
-                  {/* Lead Time Notice */}
-                  <div className="p-3.5 bg-muted/60 border border-border rounded-2xl text-xs text-muted-foreground flex items-start gap-2.5">
-                    <Clock className="w-4 h-4 text-primary mt-0.5 flex-shrink-0" />
-                    <span>
-                      <strong className="text-foreground">Diseños personalizados:</strong> demora de producción de{" "}
-                      <strong className="text-primary">{settings.customLeadTimeDays}</strong> a partir del pago.
-                    </span>
+                  {/* Lead Time & Delivery Notice */}
+                  <div className="p-3.5 bg-muted/60 border border-border rounded-2xl text-xs text-muted-foreground space-y-2">
+                    <div className="flex items-start gap-2.5">
+                      <Clock className="w-4 h-4 text-primary mt-0.5 flex-shrink-0" />
+                      <span>
+                        <strong className="text-foreground">Confección y producción:</strong> demora de{" "}
+                        <strong className="text-primary">{settings.customLeadTimeDays || "4 a 5 días hábiles"}</strong> desde el pago.
+                      </span>
+                    </div>
+                    <div className="flex items-start gap-2.5">
+                      <Truck className="w-4 h-4 text-primary mt-0.5 flex-shrink-0" />
+                      <span>
+                        <strong className="text-foreground">Envío:</strong>{" "}
+                        {isFreeShipping
+                          ? "Envío gratis aplicado."
+                          : "A cargo del comprador. Se coordina directamente con la tienda tras la compra (o retiro sin cargo en Córdoba Capital)."}
+                      </span>
+                    </div>
                   </div>
 
                   {/* Error Alert */}

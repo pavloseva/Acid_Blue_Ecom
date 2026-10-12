@@ -143,6 +143,7 @@ export async function fetchStoreSettingsFromCloud(): Promise<{
   minPurchaseAmount: number
   customLeadTimeDays: string
   bannerNotice?: string
+  freeShippingThreshold?: number | null
 } | null> {
   try {
     const res = await fetch(`${SUPABASE_URL}/rest/v1/products?id=eq.store_settings&select=*`, {
@@ -161,6 +162,10 @@ export async function fetchStoreSettingsFromCloud(): Promise<{
         minPurchaseAmount: Number(row.price) || 0,
         customLeadTimeDays: parsed.customLeadTimeDays || "4 a 5 días hábiles desde el pago",
         bannerNotice: parsed.bannerNotice,
+        freeShippingThreshold:
+          typeof parsed.freeShippingThreshold === "number"
+            ? parsed.freeShippingThreshold
+            : null,
         ...parsed,
       }
     }
@@ -176,6 +181,7 @@ export async function saveStoreSettingsToCloud(settings: {
   customLeadTimeDays: string
   bannerNotice?: string
   categories?: any[]
+  freeShippingThreshold?: number | null
   [key: string]: any
 }): Promise<boolean> {
   try {

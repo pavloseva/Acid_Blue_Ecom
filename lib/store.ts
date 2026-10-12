@@ -31,6 +31,7 @@ export interface StoreSettings {
   customLeadTimeDays: string
   bannerNotice?: string
   categories?: CategoryItem[]
+  freeShippingThreshold?: number | null
 }
 
 export const DEFAULT_SETTINGS: StoreSettings = {
@@ -38,6 +39,7 @@ export const DEFAULT_SETTINGS: StoreSettings = {
   customLeadTimeDays: "4 a 5 días hábiles desde el pago",
   bannerNotice: "Compra mínima: $15.000 · Envíos a todo el país",
   categories: DEFAULT_CATEGORIES,
+  freeShippingThreshold: null,
 }
 
 export type OrderStatus = "pendiente" | "en_preparacion" | "enviado" | "entregado" | "cancelado"
@@ -286,6 +288,10 @@ export function getStoreSettings(): StoreSettings {
         typeof parsed.minPurchaseAmount === "number"
           ? parsed.minPurchaseAmount
           : DEFAULT_SETTINGS.minPurchaseAmount,
+      freeShippingThreshold:
+        typeof parsed.freeShippingThreshold === "number"
+          ? parsed.freeShippingThreshold
+          : (parsed.freeShippingThreshold === null ? null : DEFAULT_SETTINGS.freeShippingThreshold),
       categories:
         Array.isArray(parsed.categories) && parsed.categories.length > 0
           ? parsed.categories
@@ -306,6 +312,10 @@ export async function saveStoreSettings(settings: Partial<StoreSettings>): Promi
       settings.minPurchaseAmount !== undefined
         ? Number(settings.minPurchaseAmount)
         : current.minPurchaseAmount,
+    freeShippingThreshold:
+      settings.freeShippingThreshold !== undefined
+        ? (settings.freeShippingThreshold ? Number(settings.freeShippingThreshold) : null)
+        : current.freeShippingThreshold,
   }
 
   if (isClient()) {
@@ -755,6 +765,16 @@ export function sendOrderConfirmationEmail(order: Order, paymentId?: string): Em
 • Estado: Pendiente de comprobante
 ------------------------------------------`
 
+  const settings = getStoreSettings()
+  const isFreeShipping =
+    typeof settings.freeShippingThreshold === "number" &&
+    settings.freeShippingThreshold > 0 &&
+    subtotal >= settings.freeShippingThreshold
+
+  const shippingText = isFreeShipping
+    ? "Gratis (beneficio aplicado)"
+    : "A coordinar con la tienda (a cargo del cliente)"
+
   return recordEmail({
     type: "order",
     orderId: order.id,
@@ -773,16 +793,17 @@ DETALLE DEL PEDIDO:
 ${itemsText}
 ------------------------------------------
 Subtotal: $${subtotal.toLocaleString("es-AR")}
-Envío: ${shipping === 0 ? "Gratis" : "$" + shipping.toLocaleString("es-AR")}
-Total: $${total.toLocaleString("es-AR")}
+Envío: ${shippingText}
+Total Productos: $${total.toLocaleString("es-AR")}
 
-DATOS DE ENVÍO:
+DATOS DE ENTREGA:
 Destinatario: ${order.customer.name}
 Dirección: ${order.customer.address} ${order.customer.city ? `(${order.customer.city})` : ""}
 Teléfono: ${order.customer.phone || "No especificado"}
 
-TIEMPOS DE ENTREGA:
-Despachamos tu pedido en 24/48 hs hábiles por correo. Te avisaremos cuando esté en camino.
+TIEMPOS DE PRODUCCIÓN Y ENVÍO:
+• Confección / Producción: 4 a 5 días hábiles a partir de la confirmación del pago.
+• Envío: El costo y despacho del envío se coordina directamente con la tienda tras la compra (a cargo del comprador). Te contactaremos a la brevedad para coordinar la entrega o retiro en Córdoba Capital.
 
 Si tenés alguna consulta, respondé a este correo o escribinos por WhatsApp.
 

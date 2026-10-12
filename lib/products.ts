@@ -23,7 +23,7 @@ export interface Product {
 }
 
 const DELIVERY =
-  "Envíos a todo el país por correo. Despachamos en 24/48 hs hábiles una vez confirmado el pago. Retiro sin cargo en Córdoba Capital. Cambios dentro de los 7 días si el producto está sin uso."
+  "Producción y confección: 4 a 5 días hábiles una vez confirmado el pago. El envío es a cargo del comprador y se coordina directamente con la tienda (o retiro sin cargo en Córdoba Capital). Cambios dentro de los 7 días si el producto está sin uso."
 
 export const products: Product[] = [
   {

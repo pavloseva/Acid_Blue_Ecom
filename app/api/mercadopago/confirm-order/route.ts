@@ -106,8 +106,9 @@ Destinatario: ${customerName}
 Dirección: ${order.customer_address || "A coordinar"}
 Teléfono: ${order.customer_phone || "No especificado"}
 
-TIEMPOS DE ENTREGA:
-Despachamos tu pedido en 24/48 hs hábiles por correo. Te avisaremos cuando el paquete esté en camino.
+TIEMPOS DE PRODUCCIÓN Y ENVÍO:
+• Confección / Producción: 4 a 5 días hábiles a partir de la confirmación del pago.
+• Envío: El costo y envío es a cargo del comprador y se coordina directamente con la tienda (o retiro sin cargo en Córdoba Capital). Te contactaremos a la brevedad para coordinar la entrega o despacho.
 
 Si tenés alguna consulta, podés responder directamente a este correo o escribirnos por WhatsApp.
 

@@ -43,7 +43,7 @@ export function TrustBadges() {
     {
       icon: Truck,
       title: "Envíos a todo el país",
-      description: "Despachamos a cada provincia"
+      description: "A coordinar con la tienda"
     },
     {
       icon: Clock,
