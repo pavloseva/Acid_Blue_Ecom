@@ -73,7 +73,7 @@ export function Header() {
             </button>
             <Link
               href="/admin"
-              className="hidden sm:block p-2 text-foreground/70 hover:text-primary boty-transition"
+              className="p-2 text-foreground/70 hover:text-primary boty-transition"
               aria-label="Panel Administrador"
               title="Panel Administrador"
             >
@@ -105,13 +105,25 @@ export function Header() {
           }`}
         >
           <div className="flex flex-col gap-4 pt-4 border-t border-border/50">
-            <Link href="/shop" className="text-sm tracking-wide text-foreground/70 hover:text-primary boty-transition">
+            <Link
+              href="/shop"
+              onClick={() => setIsMenuOpen(false)}
+              className="text-sm tracking-wide text-foreground/70 hover:text-primary boty-transition"
+            >
               Tienda
             </Link>
-            <Link href="/#envios" className="text-sm tracking-wide text-foreground/70 hover:text-primary boty-transition">
+            <Link
+              href="/#envios"
+              onClick={() => setIsMenuOpen(false)}
+              className="text-sm tracking-wide text-foreground/70 hover:text-primary boty-transition"
+            >
               Envíos
             </Link>
-            <Link href="/admin" className="text-sm tracking-wide text-primary hover:underline boty-transition font-medium">
+            <Link
+              href="/admin"
+              onClick={() => setIsMenuOpen(false)}
+              className="text-sm tracking-wide text-primary hover:underline boty-transition font-medium"
+            >
               Panel Administrador
             </Link>
           </div>

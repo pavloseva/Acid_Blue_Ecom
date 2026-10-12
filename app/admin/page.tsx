@@ -131,7 +131,12 @@ const STATUS_CONFIG: Record<
 
 export default function AdminDashboardPage() {
   const router = useRouter()
-  const [isAuthenticated, setIsAuthenticated] = useState(false)
+  const [isAuthenticated, setIsAuthenticated] = useState(() => {
+    if (typeof window !== "undefined") {
+      return localStorage.getItem("acid_blue_admin_auth_v1") === "true"
+    }
+    return false
+  })
   const [isMounted, setIsMounted] = useState(false)
 
   // Login form state (if not authenticated)
@@ -246,9 +251,15 @@ export default function AdminDashboardPage() {
     }
 
     const handleUpdate = () => {
-      syncStore()
+      const isAuth = isAdminAuthenticated()
+      setIsAuthenticated(isAuth)
+      if (isAuth) {
+        syncStore()
+      }
     }
     window.addEventListener("acid_store_updated", handleUpdate)
+    window.addEventListener("storage", handleUpdate)
+    window.addEventListener("focus", handleUpdate)
 
     // Polling interval: automatically query Supabase every 15s for incoming orders
     const pollInterval = setInterval(() => {
@@ -259,6 +270,8 @@ export default function AdminDashboardPage() {
 
     return () => {
       window.removeEventListener("acid_store_updated", handleUpdate)
+      window.removeEventListener("storage", handleUpdate)
+      window.removeEventListener("focus", handleUpdate)
       clearInterval(pollInterval)
     }
   }, [])
@@ -670,7 +683,14 @@ Total: ${formatARS(order.total)}`
   const pendingOrdersCount = orders.filter((o) => o && o.status === "pendiente").length
   const shippedOrdersCount = orders.filter((o) => o && (o.status === "enviado" || o.status === "entregado")).length
 
-  if (!isMounted) return null
+  if (!isMounted) {
+    return (
+      <div className="min-h-screen bg-background flex flex-col items-center justify-center">
+        <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin mb-3" />
+        <p className="text-xs text-muted-foreground font-mono">Cargando panel...</p>
+      </div>
+    )
+  }
 
   // If not authenticated, render login screen
   if (!isAuthenticated) {

@@ -2,6 +2,7 @@
 
 import { Suspense, useEffect, useState } from "react"
 import { useSearchParams } from "next/navigation"
+import Link from "next/link"
 import { CheckCircle2, Clock, XCircle, ArrowRight, ShoppingBag, ShieldCheck, Check } from "lucide-react"
 import { Header } from "@/components/boty/header"
 import { Footer } from "@/components/boty/footer"
@@ -154,20 +155,20 @@ function ResultadoContent() {
 
         {/* Direct Action Navigation Buttons */}
         <div className="flex flex-col sm:flex-row gap-3 pt-2">
-          <a
+          <Link
             href="/shop"
             className="flex-1 inline-flex items-center justify-center gap-2 px-6 py-4 rounded-full bg-primary text-primary-foreground font-semibold hover:bg-primary/90 boty-transition text-sm shadow-lg shadow-primary/25 cursor-pointer active:scale-95"
           >
             <ShoppingBag className="w-4 h-4" />
             Volver a la tienda
-          </a>
-          <a
+          </Link>
+          <Link
             href="/"
             className="flex-1 inline-flex items-center justify-center gap-2 px-6 py-4 rounded-full border border-border bg-card/60 text-foreground font-medium hover:bg-muted boty-transition text-sm cursor-pointer active:scale-95"
           >
             Ir al inicio
             <ArrowRight className="w-4 h-4" />
-          </a>
+          </Link>
         </div>
       </div>
     </div>

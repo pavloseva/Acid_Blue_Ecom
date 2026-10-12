@@ -11,10 +11,14 @@ import { products, categoryLabels, formatARS, type Category, type Product } from
 import { getAllProducts, syncStoreWithCloud, getStoreCategories, getCategoryLabelFromStore } from "@/lib/store"
 
 export default function ShopPage() {
-  const [allProducts, setAllProducts] = useState<Product[]>(products)
+  const [allProducts, setAllProducts] = useState<Product[]>(() => {
+    if (typeof window !== "undefined") {
+      return getAllProducts()
+    }
+    return products
+  })
   const [selectedCategory, setSelectedCategory] = useState<"all" | Category>("all")
   const [showFilters, setShowFilters] = useState(false)
-  const [isVisible, setIsVisible] = useState(false)
   const gridRef = useRef<HTMLDivElement>(null)
 
   const filters = useMemo(() => {
@@ -53,33 +57,6 @@ export default function ShopPage() {
 
   const filteredProducts =
     selectedCategory === "all" ? allProducts : allProducts.filter((p) => p.category === selectedCategory)
-
-  useEffect(() => {
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        if (entry.isIntersecting) {
-          setIsVisible(true)
-        }
-      },
-      { threshold: 0.1 }
-    )
-
-    if (gridRef.current) {
-      observer.observe(gridRef.current)
-    }
-
-    return () => {
-      if (gridRef.current) {
-        observer.unobserve(gridRef.current)
-      }
-    }
-  }, [])
-
-  useEffect(() => {
-    setIsVisible(false)
-    const timer = setTimeout(() => setIsVisible(true), 50)
-    return () => clearTimeout(timer)
-  }, [selectedCategory])
 
   return (
     <main className="min-h-screen">
@@ -173,8 +150,8 @@ export default function ShopPage() {
 
           {/* Product Grid */}
           <div ref={gridRef} className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
-            {filteredProducts.map((product, index) => (
-              <ProductCard key={product.id} product={product} index={index} isVisible={isVisible} />
+            {filteredProducts.map((product) => (
+              <ProductCard key={product.id} product={product} />
             ))}
           </div>
         </div>
@@ -187,41 +164,25 @@ export default function ShopPage() {
 
 function ProductCard({
   product,
-  index,
-  isVisible,
 }: {
   product: Product
-  index: number
-  isVisible: boolean
 }) {
-  const [imageLoaded, setImageLoaded] = useState(false)
   const { addItem } = useCart()
 
   return (
     <Link
       href={`/product/${product.id}`}
-      className={`group transition-all duration-700 ease-out ${
-        isVisible ? 'opacity-100 scale-100' : 'opacity-0 scale-95'
-      }`}
-      style={{ transitionDelay: `${index * 80}ms` }}
+      className="group block boty-transition"
     >
       <div className="bg-card rounded-3xl overflow-hidden boty-shadow boty-transition group-hover:scale-[1.02] group-hover:acid-glow border border-border">
         {/* Image */}
         <div className="relative aspect-square bg-muted overflow-hidden">
-          <div
-            className={`absolute inset-0 bg-gradient-to-br from-muted via-muted/50 to-muted animate-pulse transition-opacity duration-500 ${
-              imageLoaded ? 'opacity-0' : 'opacity-100'
-            }`}
-          />
           <Image
             src={product.image || "/placeholder.svg"}
             alt={product.name}
             fill
             unoptimized
-            className={`object-cover boty-transition group-hover:scale-105 transition-opacity duration-500 ${
-              imageLoaded ? 'opacity-100' : 'opacity-0'
-            }`}
-            onLoad={() => setImageLoaded(true)}
+            className="object-cover boty-transition group-hover:scale-105"
           />
           {/* Badge */}
           {product.badge && (
