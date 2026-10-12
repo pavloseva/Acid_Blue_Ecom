@@ -250,8 +250,11 @@ export async function saveOrder(newOrderData: {
     console.warn("Error saving order to Supabase:", err)
   }
 
-  // Automatically trigger customer order email
-  sendOrderConfirmationEmail(newOrder)
+  // Automatically trigger customer order email for non-MercadoPago orders (e.g. transferencia).
+  // For Mercado Pago orders, the email is dispatched upon payment approval with the MP operation code.
+  if (newOrderData.paymentMethod !== "mercadopago") {
+    sendOrderConfirmationEmail(newOrder)
+  }
 
   return newOrder
 }
@@ -718,7 +721,7 @@ Equipo Acid Blue`,
   })
 }
 
-export function sendOrderConfirmationEmail(order: Order): EmailRecord {
+export function sendOrderConfirmationEmail(order: Order, paymentId?: string): EmailRecord {
   const itemsText = (order.items || [])
     .map((i) => `• ${i.quantity || 1}x ${i.name || "Producto"} (${i.description || ""}) - $${Number(i.price || 0).toLocaleString("es-AR")}`)
     .join("\n")
@@ -727,14 +730,43 @@ export function sendOrderConfirmationEmail(order: Order): EmailRecord {
   const shipping = Number(order.shipping) || 0
   const total = Number(order.total) || 0
 
+  const mpCode =
+    paymentId ||
+    (order.paymentMethod?.includes("#")
+      ? order.paymentMethod.replace(/[^0-9]/g, "")
+      : null)
+
+  const paymentSection = mpCode
+    ? `DATOS DEL PAGO:
+------------------------------------------
+• Método: Mercado Pago Oficial
+• Código de Operación MP: #${mpCode}
+• Estado: Pago Aprobado (En preparación)
+------------------------------------------`
+    : order.paymentMethod?.toLowerCase().includes("mercado")
+    ? `DATOS DEL PAGO:
+------------------------------------------
+• Método: Mercado Pago Oficial
+• Estado: En preparación
+------------------------------------------`
+    : `DATOS DEL PAGO:
+------------------------------------------
+• Método: Transferencia Bancaria
+• Estado: Pendiente de comprobante
+------------------------------------------`
+
   return recordEmail({
     type: "order",
     orderId: order.id,
     to: order.customer?.email || "",
-    subject: `Confirmación de pedido #${order.id} · Acid Blue`,
+    subject: mpCode
+      ? `Confirmación de pedido #${order.id} (Operación MP #${mpCode}) · Acid Blue`
+      : `Confirmación de pedido #${order.id} · Acid Blue`,
     body: `¡Hola ${order.customer?.name || "Cliente"}!
 
 ¡Gracias por tu compra en Acid Blue! Tu pedido #${order.id} ha sido registrado con éxito y ya lo estamos preparando en nuestro taller.
+
+${paymentSection}
 
 DETALLE DEL PEDIDO:
 ------------------------------------------

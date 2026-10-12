@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server"
+import { sendEmailNotification } from "@/lib/email-service"
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || "https://zzpohmrcxcspvzacbwlw.supabase.co"
 const SERVICE_KEY =
@@ -45,11 +46,69 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Error al actualizar en base de datos", details: errText }, { status: 500 })
     }
 
+    const updatedRows = await updateRes.json()
+    const order = Array.isArray(updatedRows) ? updatedRows[0] : null
+
+    // Send customer confirmation email with the official Mercado Pago Operation Code!
+    let emailSent = false
+    if (isApproved && order?.customer_email) {
+      try {
+        const itemsList = Array.isArray(order.items)
+          ? order.items
+              .map((i: any) => `• ${i.quantity || 1}x ${i.name || "Producto"} - $${Number(i.price || 0).toLocaleString("es-AR")}`)
+              .join("\n")
+          : ""
+
+        const emailBody = `¡Hola ${order.customer_name || "Cliente"}!
+
+¡Tu pago fue acreditado con éxito en Mercado Pago! Tu pedido #${orderId} ya está confirmado y en preparación en nuestro taller de diseño.
+
+DATOS DEL PAGO:
+------------------------------------------
+• Método: Mercado Pago Oficial
+• Código de Operación MP: #${paymentId || "Acreditado"}
+• Estado: Pago Aprobado (En preparación)
+------------------------------------------
+
+DETALLE DEL PEDIDO:
+------------------------------------------
+${itemsList}
+------------------------------------------
+Total Abonado: $${Number(order.total || 0).toLocaleString("es-AR")}
+
+DATOS DE ENTREGA:
+Destinatario: ${order.customer_name || "Cliente"}
+Dirección: ${order.customer_address || "A coordinar"}
+Teléfono: ${order.customer_phone || "No especificado"}
+
+TIEMPOS DE ENTREGA:
+Despachamos tu pedido en 24/48 hs hábiles por correo. Te avisaremos cuando el paquete esté en camino.
+
+Si tenés alguna consulta, podés responder directamente a este correo o escribirnos por WhatsApp.
+
+¡Gracias por elegir arte auténtico!
+Equipo Acid Blue`
+
+        const emailResult = await sendEmailNotification({
+          to: order.customer_email,
+          subject: `Confirmación de pedido #${orderId} (Operación MP #${paymentId || ""}) · Acid Blue`,
+          body: emailBody,
+          type: "order",
+          orderId,
+        })
+
+        emailSent = emailResult.success
+      } catch (emailErr) {
+        console.error("Error al enviar email de confirmación MP:", emailErr)
+      }
+    }
+
     return NextResponse.json({
       success: true,
       orderId,
       status: newStatus,
       paymentMethod: paymentMethodLabel,
+      emailSent,
     })
   } catch (error: any) {
     console.error("Error in confirm-order route:", error)
