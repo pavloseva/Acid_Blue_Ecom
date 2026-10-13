@@ -13,6 +13,9 @@ import {
   uploadMediaToCloud,
   fetchStoreSettingsFromCloud,
   saveStoreSettingsToCloud,
+  fetchEmailsFromCloud,
+  saveEmailToCloud,
+  deleteEmailFromCloud,
 } from "./supabase"
 
 export { uploadMediaToCloud }
@@ -93,60 +96,8 @@ const EMAILS_KEY = "acid_blue_emails_v1"
 const AUTH_KEY = "acid_blue_admin_auth_v1"
 const SETTINGS_KEY = "acid_blue_settings_v2"
 
-// Initial sample orders so the admin view isn't empty upon first opening
-const SAMPLE_ORDERS: Order[] = [
-  {
-    id: "ORD-2026-1042",
-    customer: {
-      name: "Valentina Gómez",
-      email: "valen.gomez@gmail.com",
-      address: "Av. Vélez Sársfield 1420, Nueva Córdoba",
-      city: "Córdoba Capital",
-      phone: "+54 9 351 688-2341",
-      notes: "Dejar en conserjería si no respondo el timbre.",
-    },
-    items: [
-      {
-        id: "bandolera-chica-transparente",
-        name: "Bandolera Chica Transparente",
-        description: "PVC cristal con estampa BTS · Chica",
-        price: 25000,
-        quantity: 1,
-        image: "/images/products/bandolera-chica-1.jpg",
-      },
-    ],
-    subtotal: 25000,
-    shipping: 0,
-    total: 25000,
-    status: "en_preparacion",
-    createdAt: "2026-10-07T18:45:00.000Z",
-  },
-  {
-    id: "ORD-2026-1039",
-    customer: {
-      name: "Mateo Rossi",
-      email: "mateo.rossi@outlook.com",
-      address: "Belgrano 850, Piso 4 B",
-      city: "Córdoba Capital",
-      phone: "+54 9 351 455-9012",
-    },
-    items: [
-      {
-        id: "mochila-negra-transparente",
-        name: "Mochila Negra Transparente",
-        description: "PVC cristal con ribetes negros · Estándar",
-        price: 25000,
-        quantity: 1,
-        image: "/images/products/mochila-negra-1.jpg",
-      },
-    ],
-    subtotal: 25000,
-    shipping: 0,
-    total: 25000,
-    status: "pendiente",
-    createdAt: "2026-10-08T14:20:00.000Z",
-  },
-]
+// Orders start empty for a clean production state
+const SAMPLE_ORDERS: Order[] = []
 
 function isClient(): boolean {
   return typeof window !== "undefined"
@@ -163,16 +114,16 @@ export function notifyStoreChange() {
 // -------------------------------------------------------------
 
 export function getOrders(): Order[] {
-  if (!isClient()) return SAMPLE_ORDERS
+  if (!isClient()) return []
 
   try {
     const raw = localStorage.getItem(ORDERS_KEY)
     if (!raw) {
-      localStorage.setItem(ORDERS_KEY, JSON.stringify(SAMPLE_ORDERS))
-      return SAMPLE_ORDERS
+      localStorage.setItem(ORDERS_KEY, JSON.stringify([]))
+      return []
     }
     const parsed = JSON.parse(raw)
-    if (!Array.isArray(parsed)) return SAMPLE_ORDERS
+    if (!Array.isArray(parsed)) return []
     return parsed.map((o: any) => {
       const total = Number(o?.total) || 0
       const shipping = Number(o?.shipping) || 0
@@ -207,7 +158,7 @@ export function getOrders(): Order[] {
     })
   } catch (err) {
     console.error("Error reading orders from localStorage:", err)
-    return SAMPLE_ORDERS
+    return []
   }
 }
 
@@ -334,19 +285,23 @@ export async function saveStoreSettings(settings: Partial<StoreSettings>): Promi
 export async function syncStoreWithCloud(): Promise<void> {
   if (!isClient()) return
   try {
-    const [cloudProducts, cloudOrders, cloudSettings] = await Promise.all([
+    const [cloudProducts, cloudOrders, cloudSettings, cloudEmails] = await Promise.all([
       fetchProductsFromCloud(),
       fetchOrdersFromCloud(),
       fetchStoreSettingsFromCloud(),
+      fetchEmailsFromCloud(),
     ])
     if (cloudProducts && cloudProducts.length > 0) {
       localStorage.setItem(PRODUCTS_KEY, JSON.stringify(cloudProducts))
     }
-    if (Array.isArray(cloudOrders) && cloudOrders.length > 0) {
+    if (Array.isArray(cloudOrders)) {
       localStorage.setItem(ORDERS_KEY, JSON.stringify(cloudOrders))
     }
     if (cloudSettings) {
       localStorage.setItem(SETTINGS_KEY, JSON.stringify(cloudSettings))
+    }
+    if (Array.isArray(cloudEmails)) {
+      localStorage.setItem(EMAILS_KEY, JSON.stringify(cloudEmails))
     }
     notifyStoreChange()
   } catch (err) {
@@ -368,7 +323,7 @@ export function deleteOrder(orderId: string): void {
 
 export function resetSampleOrders(): void {
   if (isClient()) {
-    localStorage.setItem(ORDERS_KEY, JSON.stringify(SAMPLE_ORDERS))
+    localStorage.setItem(ORDERS_KEY, JSON.stringify([]))
     notifyStoreChange()
   }
 }
@@ -699,7 +654,12 @@ export function recordEmail(emailData: Omit<EmailRecord, "id" | "sentAt">): Emai
     }
   }
 
-  // Try optional server route
+  // Persist to Supabase Cloud Database!
+  saveEmailToCloud(newEmail).catch((err) =>
+    console.warn("Error saving email to Supabase:", err)
+  )
+
+  // Try optional server route to dispatch real email via SMTP / Resend
   try {
     fetch("/api/send-email", {
       method: "POST",
@@ -709,6 +669,18 @@ export function recordEmail(emailData: Omit<EmailRecord, "id" | "sentAt">): Emai
   } catch {}
 
   return newEmail
+}
+
+export function deleteEmail(emailId: string): void {
+  const emails = getEmails()
+  const updated = emails.filter((e) => e.id !== emailId)
+  if (isClient()) {
+    localStorage.setItem(EMAILS_KEY, JSON.stringify(updated))
+    notifyStoreChange()
+  }
+  deleteEmailFromCloud(emailId).catch((err) =>
+    console.warn("Error deleting email from Supabase:", err)
+  )
 }
 
 export function sendNewsletterWelcomeEmail(email: string): EmailRecord {

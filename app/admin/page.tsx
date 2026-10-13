@@ -65,6 +65,7 @@ import {
   syncStoreWithCloud,
   uploadMediaToCloud,
   getEmails,
+  deleteEmail,
   sendNewsletterWelcomeEmail,
   sendOrderConfirmationEmail,
   getStoreSettings,
@@ -329,6 +330,16 @@ export default function AdminDashboardPage() {
       syncStore()
       if (selectedOrder?.id === orderId) {
         setSelectedOrder(null)
+      }
+    }
+  }
+
+  const handleDeleteEmail = (emailId: string) => {
+    if (window.confirm("¿Seguro que querés eliminar este registro de correo?")) {
+      deleteEmail(emailId)
+      syncStore()
+      if (selectedEmail?.id === emailId) {
+        setSelectedEmail(null)
       }
     }
   }
@@ -1962,11 +1973,19 @@ Total: ${formatARS(order.total)}`
               {selectedEmail.body}
             </div>
 
-            <div className="mt-6 flex justify-end">
+            <div className="mt-6 flex items-center justify-between">
+              <button
+                type="button"
+                onClick={() => handleDeleteEmail(selectedEmail.id)}
+                className="text-xs text-rose-400 hover:text-rose-300 px-3.5 py-2 rounded-xl border border-rose-500/20 hover:bg-rose-500/10 boty-transition flex items-center gap-1.5 cursor-pointer"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+                Eliminar Registro
+              </button>
               <button
                 type="button"
                 onClick={() => setSelectedEmail(null)}
-                className="bg-primary text-primary-foreground px-5 py-2.5 rounded-xl text-sm font-medium hover:bg-primary/90"
+                className="bg-primary text-primary-foreground px-5 py-2.5 rounded-xl text-sm font-medium hover:bg-primary/90 cursor-pointer"
               >
                 Cerrar
               </button>

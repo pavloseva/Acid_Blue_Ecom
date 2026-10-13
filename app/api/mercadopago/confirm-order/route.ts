@@ -115,15 +115,41 @@ Si tenés alguna consulta, podés responder directamente a este correo o escribi
 ¡Gracias por elegir arte auténtico!
 Equipo Acid Blue`
 
+        const emailSubject = `Confirmación de pedido #${orderId} (Operación MP #${paymentId || ""}) · Acid Blue`
         const emailResult = await sendEmailNotification({
           to: customerEmail,
-          subject: `Confirmación de pedido #${orderId} (Operación MP #${paymentId || ""}) · Acid Blue`,
+          subject: emailSubject,
           body: emailBody,
           type: "order",
           orderId,
         })
 
         emailSent = emailResult.success
+
+        // Persist email record in Supabase Cloud Database!
+        try {
+          await fetch(`${SUPABASE_URL}/rest/v1/emails`, {
+            method: "POST",
+            headers: {
+              apikey: SERVICE_KEY,
+              Authorization: `Bearer ${SERVICE_KEY}`,
+              "Content-Type": "application/json",
+              Prefer: "resolution=merge-duplicates",
+            },
+            body: JSON.stringify({
+              id: `EML-MP-${orderId}`,
+              type: "order",
+              recipient: customerEmail,
+              subject: emailSubject,
+              body: emailBody,
+              order_id: orderId,
+              status: emailSent ? "enviado" : "error",
+            }),
+          })
+          console.log(`[CONFIRM ORDER] Email registrado en Supabase para #${orderId}`)
+        } catch (saveEmailErr) {
+          console.warn("Error guardando email en Supabase:", saveEmailErr)
+        }
       } catch (emailErr) {
         console.error("Error al enviar email de confirmación MP:", emailErr)
       }

@@ -1,5 +1,5 @@
 import { type Product, products as fallbackProducts } from "@/lib/products"
-import { type Order, type OrderStatus } from "@/lib/store"
+import { type Order, type OrderStatus, type EmailRecord } from "@/lib/store"
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || "https://zzpohmrcxcspvzacbwlw.supabase.co"
 const ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inp6cG9obXJjeGNzcHZ6YWNid2x3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTE1MDg4NzUsImV4cCI6MjEwNzA4NDg3NX0.u6bgUJbUyvhaZ1tvZLmzr3rSibaPLwAB0WqP_hQfpag"
@@ -112,6 +112,34 @@ function mapOrderToDb(o: Order) {
     total: Number(o.total) || 0,
     status: o.status || "pendiente",
     payment_method: (o as any).paymentMethod || "transferencia",
+  }
+}
+
+// -------------------------------------------------------------
+// EMAIL MAPPERS
+// -------------------------------------------------------------
+function mapDbToEmail(row: any): EmailRecord {
+  return {
+    id: String(row.id || `EML-${Date.now()}`),
+    type: row.type === "newsletter" ? "newsletter" : "order",
+    orderId: row.order_id || undefined,
+    to: row.recipient || "",
+    subject: row.subject || "",
+    body: row.body || "",
+    sentAt: row.created_at || new Date().toISOString(),
+  }
+}
+
+function mapEmailToDb(e: EmailRecord) {
+  return {
+    id: e.id,
+    type: e.type || "order",
+    recipient: e.to || "",
+    subject: e.subject || "",
+    body: e.body || "",
+    order_id: e.orderId || null,
+    status: "enviado",
+    created_at: e.sentAt || new Date().toISOString(),
   }
 }
 
@@ -324,6 +352,58 @@ export async function deleteOrderFromCloud(id: string): Promise<boolean> {
     return res.ok
   } catch (err) {
     console.error("Error deleting order from Supabase:", err)
+    return false
+  }
+}
+
+// -------------------------------------------------------------
+// EMAILS API METHODS
+// -------------------------------------------------------------
+export async function fetchEmailsFromCloud(): Promise<EmailRecord[]> {
+  try {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/emails?select=*&order=created_at.desc`, {
+      headers: getHeaders(),
+      cache: "no-store",
+    })
+    if (!res.ok) throw new Error(`HTTP error ${res.status}`)
+    const rows = await res.json()
+    if (Array.isArray(rows)) {
+      return rows.map(mapDbToEmail)
+    }
+    return []
+  } catch (err) {
+    console.warn("Could not load emails from Supabase:", err)
+    return []
+  }
+}
+
+export async function saveEmailToCloud(email: EmailRecord): Promise<boolean> {
+  try {
+    const dbRow = mapEmailToDb(email)
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/emails`, {
+      method: "POST",
+      headers: getHeaders({
+        "Content-Type": "application/json",
+        Prefer: "resolution=merge-duplicates",
+      }),
+      body: JSON.stringify(dbRow),
+    })
+    return res.ok
+  } catch (err) {
+    console.error("Error saving email to Supabase:", err)
+    return false
+  }
+}
+
+export async function deleteEmailFromCloud(id: string): Promise<boolean> {
+  try {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/emails?id=eq.${encodeURIComponent(id)}`, {
+      method: "DELETE",
+      headers: getHeaders(),
+    })
+    return res.ok
+  } catch (err) {
+    console.error("Error deleting email from Supabase:", err)
     return false
   }
 }
