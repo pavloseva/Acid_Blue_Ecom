@@ -24,6 +24,7 @@ export interface CategoryItem {
 
 export const DEFAULT_CATEGORIES: CategoryItem[] = [
   { id: "mochilas-y-bolsos", label: "Mochilas y Bolsos" },
+  { id: "almohadones", label: "Almohadones" },
 ]
 
 export interface StoreSettings {

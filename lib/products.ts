@@ -27,6 +27,80 @@ const DELIVERY =
 
 export const products: Product[] = [
   {
+    id: "almohadon-chico",
+    name: "Almohadón Chico",
+    description: "Almohadón compacto estampado con figuras y personajes",
+    tagline: "Diseño compacto ideal para decorar y coleccionar",
+    longDescription:
+      "Almohadón chico confeccionado en tela suave al tacto con estampa sublimada de alta definición. Relleno con vellón siliconado hipoalergénico. Varios modelos disponibles de anime, gaming y cultura pop.",
+    price: 3000,
+    originalPrice: null,
+    image: "/images/products/almohadon-chico.jpg",
+    images: ["/images/products/almohadon-chico.jpg"],
+    imageFit: "cover",
+    badge: "Popular",
+    category: "almohadones",
+    options: ["Diseño Surtido", "Personalizado"],
+    optionLabel: "Modelo",
+    details:
+      "Medidas aprox: 20x20 cm según figura. Tela suave y estampa duradera que no destiñe con los lavados.",
+    care: "Lavar a mano con agua fría y jabón neutro. Secar a la sombra. No planchar directo sobre la estampa.",
+    material: "Microfibra suave sublimada y relleno de vellón siliconado hipoalergénico.",
+    delivery: DELIVERY,
+  },
+  {
+    id: "almohadon-grande",
+    name: "Almohadón Grande",
+    description: "Almohadón grande premium con estampas exclusivas de alta definición",
+    tagline: "Máximo tamaño y confort con estampas fotográficas nítidas",
+    longDescription:
+      "Almohadón grande premium confeccionado en tela suave de alta resistencia con estampa frontal nítida en alta resolución. Relleno super mullido de vellón siliconado indeformable. Diseños disponibles: Jungkook (BTS), Felix (Stray Kids), Ni-ki (Enhypen) o diseño personalizado a pedido.",
+    price: 10000,
+    originalPrice: null,
+    image: "/images/products/almohadon-jungkook-bts.jpg",
+    images: [
+      "/images/products/almohadon-jungkook-bts.jpg",
+      "/images/products/almohadon-felix-straykids.jpg",
+      "/images/products/almohadon-niki-enhypen.jpg",
+    ],
+    imageFit: "cover",
+    badge: "Más pedido",
+    category: "almohadones",
+    options: ["Jungkook (BTS)", "Felix (Stray Kids)", "Ni-ki (Enhypen)", "Personalizado"],
+    optionLabel: "Diseño / Idol",
+    details:
+      "Medidas aprox: 40x40 cm. Estampa frontal fotográfica de alta resolución, dorso suave y relleno mullido de vellón siliconado.",
+    care: "Apto para lavarropas en ciclo delicado con agua fría. Secar al aire libre. No usar lavandina.",
+    material: "Tela microfibra premium con estampa HD y relleno hipoalergénico indeformable.",
+    delivery: DELIVERY,
+  },
+  {
+    id: "totebag",
+    name: "Totebag",
+    description: "Bolso Tote Bag de diseño con cierre y estampas exclusivas",
+    tagline: "Práctica, espaciosa y con cierre para llevar todo seguro",
+    longDescription:
+      "Bolso Tote Bag de hombro con cierre superior reforzado y manijas anchas. Confeccionada con materiales resistentes y estampas fotográficas nítidas de alta durabilidad. Modelos disponibles: Jungkook (BTS), Agust D / Suga (BTS), RM / Namjoon (Indigo) o diseño personalizado.",
+    price: 20000,
+    originalPrice: null,
+    image: "/images/products/tote-bag-jungkook-leather.jpg",
+    images: [
+      "/images/products/tote-bag-jungkook-leather.jpg",
+      "/images/products/tote-bag-agust-d-suga.jpg",
+      "/images/products/tote-bag-rm-namjoon-indigo.jpg",
+    ],
+    imageFit: "cover",
+    badge: "Nuevo",
+    category: "mochilas-y-bolsos",
+    options: ["Jungkook (BTS)", "Agust D / Suga", "RM (Indigo)", "Personalizada"],
+    optionLabel: "Modelo",
+    details:
+      "Medidas: 40x35 cm aprox. Incluye cierre superior reforzado y manijas reforzadas de 60 cm para llevar al hombro cómodamente.",
+    care: "Lavar a mano o en ciclo suave con agua fría. Secar a la sombra. Planchar del revés a temperatura baja.",
+    material: "Lona / poliéster premium resistente con cierre cremallera y estampa HD.",
+    delivery: DELIVERY,
+  },
+  {
     id: "bandolera-chica-transparente",
     name: "Bandolera Chica Transparente",
     description: "Bandolera compacta en PVC cristal con estampa BTS",
@@ -155,6 +229,7 @@ export const products: Product[] = [
 
 export const categoryLabels: Record<string, string> = {
   "mochilas-y-bolsos": "Mochilas y Bolsos",
+  almohadones: "Almohadones",
   almohadon: "Almohadones",
   poster: "Posters",
   taza: "Tazas",
