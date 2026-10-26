@@ -186,7 +186,16 @@ export async function saveOrder(newOrderData: {
     createdAt: new Date().toISOString(),
   }
 
-  const updatedOrders = [newOrder, ...currentOrders]
+  // Persist to Supabase Cloud Database!
+  let savedToCloud = false
+  try {
+    savedToCloud = await saveOrderToCloud(newOrder)
+  } catch (err) {
+    console.warn("Error saving order to Supabase:", err)
+  }
+
+  const orderToStore = savedToCloud ? newOrder : ({ ...newOrder, pendingCloudSync: true } as Order)
+  const updatedOrders = [orderToStore, ...currentOrders]
 
   if (isClient()) {
     try {
@@ -195,13 +204,6 @@ export async function saveOrder(newOrderData: {
     } catch (err) {
       console.error("Error saving order to localStorage:", err)
     }
-  }
-
-  // Persist to Supabase Cloud Database!
-  try {
-    await saveOrderToCloud(newOrder)
-  } catch (err) {
-    console.warn("Error saving order to Supabase:", err)
   }
 
   // Automatically trigger customer order email for non-MercadoPago orders (e.g. transferencia).
@@ -295,7 +297,21 @@ export async function syncStoreWithCloud(): Promise<void> {
       localStorage.setItem(PRODUCTS_KEY, JSON.stringify(cloudProducts))
     }
     if (Array.isArray(cloudOrders)) {
-      localStorage.setItem(ORDERS_KEY, JSON.stringify(cloudOrders))
+      const localOrders = getOrders()
+      const cloudOrderIds = new Set(cloudOrders.map((o) => o.id))
+      const unsyncedLocal = localOrders.filter(
+        (o: any) => o.pendingCloudSync && !cloudOrderIds.has(o.id)
+      )
+
+      for (const pendingOrder of unsyncedLocal) {
+        const synced = await saveOrderToCloud(pendingOrder)
+        if (synced) {
+          delete (pendingOrder as any).pendingCloudSync
+        }
+      }
+
+      const mergedOrders = [...unsyncedLocal, ...cloudOrders]
+      localStorage.setItem(ORDERS_KEY, JSON.stringify(mergedOrders))
     }
     if (cloudSettings) {
       localStorage.setItem(SETTINGS_KEY, JSON.stringify(cloudSettings))

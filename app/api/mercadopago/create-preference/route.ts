@@ -124,13 +124,12 @@ export async function POST(req: Request) {
       )
     }
 
-    // Return preference ID and redirect links (sandbox_init_point for test accounts, init_point for live)
+    // Return preference ID and redirect links (init_point works for both live and test accounts)
     return NextResponse.json({
       id: mpData.id,
       init_point: mpData.init_point,
       sandbox_init_point: mpData.sandbox_init_point,
-      // For test accounts, default to sandbox_init_point if available
-      checkout_url: mpData.sandbox_init_point || mpData.init_point,
+      checkout_url: mpData.init_point || mpData.sandbox_init_point,
     })
   } catch (error: any) {
     console.error("Error creating Mercado Pago preference:", error)

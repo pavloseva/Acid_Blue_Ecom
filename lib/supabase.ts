@@ -284,7 +284,7 @@ export async function deleteProductFromCloud(id: string): Promise<boolean> {
   }
 }
 
-export async function fetchOrdersFromCloud(): Promise<Order[]> {
+export async function fetchOrdersFromCloud(): Promise<Order[] | null> {
   try {
     const res = await fetch(`${SUPABASE_URL}/rest/v1/orders?select=*&order=created_at.desc`, {
       headers: getHeaders(),
@@ -295,10 +295,10 @@ export async function fetchOrdersFromCloud(): Promise<Order[]> {
     if (Array.isArray(rows)) {
       return rows.map(mapDbToOrder)
     }
-    return []
+    return null
   } catch (err) {
     console.warn("Could not load orders from Supabase:", err)
-    return []
+    return null
   }
 }
 
@@ -309,6 +309,7 @@ export async function saveOrderToCloud(order: Order): Promise<boolean> {
       method: "POST",
       headers: getHeaders({
         "Content-Type": "application/json",
+        Prefer: "resolution=merge-duplicates",
       }),
       body: JSON.stringify(dbRow),
     })
@@ -359,7 +360,7 @@ export async function deleteOrderFromCloud(id: string): Promise<boolean> {
 // -------------------------------------------------------------
 // EMAILS API METHODS
 // -------------------------------------------------------------
-export async function fetchEmailsFromCloud(): Promise<EmailRecord[]> {
+export async function fetchEmailsFromCloud(): Promise<EmailRecord[] | null> {
   try {
     const res = await fetch(`${SUPABASE_URL}/rest/v1/emails?select=*&order=created_at.desc`, {
       headers: getHeaders(),
@@ -370,10 +371,10 @@ export async function fetchEmailsFromCloud(): Promise<EmailRecord[]> {
     if (Array.isArray(rows)) {
       return rows.map(mapDbToEmail)
     }
-    return []
+    return null
   } catch (err) {
     console.warn("Could not load emails from Supabase:", err)
-    return []
+    return null
   }
 }
 
